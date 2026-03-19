@@ -15,6 +15,11 @@ const ROOT = path.resolve(__dirname, "..");
 const DEFAULT_SOURCE = path.join(ROOT, "libs-sources");
 const OUT_DIR = path.join(ROOT, "libs-sources", "converted");
 
+/** Override make/model by source directory name (e.g. repo folder). */
+const DIR_MAKE_MODEL: Record<string, { make: string; model: string }> = {
+  leaf_can_bus_messages: { make: "Nissan", model: "Leaf" },
+};
+
 function findDbcFiles(dir: string): string[] {
   const out: string[] = [];
   if (!fs.existsSync(dir)) return out;
@@ -63,6 +68,11 @@ function parseDbc(content: string): DbcMessage[] {
   return messages;
 }
 
+function getMessageIdsFromDbcFile(dbcPath: string): number[] {
+  const content = fs.readFileSync(dbcPath, "utf-8");
+  return parseDbc(content).map((m) => m.id);
+}
+
 function dbcToVehicleLib(dbcPath: string, make: string, model: string): VehicleLibJson {
   const content = fs.readFileSync(dbcPath, "utf-8");
   const messages = parseDbc(content);
@@ -101,17 +111,23 @@ function main() {
 
   for (const [dir, files] of byDir) {
     const dirName = path.basename(dir);
-    const make = "Unknown";
-    const model = dirName.replace(/[^a-zA-Z0-9\s-]/g, " ").trim() || "Vehicle";
+    const override = DIR_MAKE_MODEL[dirName];
+    const make = override?.make ?? "Unknown";
+    const model = override?.model ?? (dirName.replace(/[^a-zA-Z0-9\s-]/g, " ").trim() || "Vehicle");
+    const allMessageIds = new Set<number>();
     let combined: VehicleLibJson = { make, model, signals: [], dtc: [] };
     for (const dbcPath of files) {
+      for (const id of getMessageIdsFromDbcFile(dbcPath)) allMessageIds.add(id);
       const lib = dbcToVehicleLib(dbcPath, make, model);
       combined.signals.push(...lib.signals);
     }
-    const safeName = (model || "dbc_export").replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 60);
+    combined.can_ids = [...allMessageIds]
+      .sort((a, b) => a - b)
+      .map((id) => "0x" + id.toString(16).toUpperCase());
+    const safeName = dirName.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 60);
     const outPath = path.join(OUT_DIR, `${safeName}.json`);
     fs.writeFileSync(outPath, JSON.stringify(combined, null, 2), "utf-8");
-    console.log("Wrote", outPath, "(", combined.signals.length, "signals)");
+    console.log("Wrote", outPath, "(", combined.signals.length, "signals,", combined.can_ids.length, "can_ids)");
   }
 
   if (dbcFiles.length === 0) {

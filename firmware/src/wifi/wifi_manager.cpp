@@ -1,6 +1,7 @@
 #include "wifi_manager.h"
 #include "config/config.h"
 #include "config/nvs_config.h"
+#include "session_state.h"
 #include <WiFi.h>
 #include <WebServer.h>
 #include <DNSServer.h>
@@ -126,6 +127,10 @@ void wifiStartAPAndCaptivePortal() {
 static const char RECONFIGURE_HTML[] =
   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>EV-Diagnostic</title></head>"
   "<body><h1>EV-Diagnostic</h1><p>Dispositivo connesso. IP: %s</p>"
+  "<form method=\"POST\" action=\"/start-session\" style=\"margin-bottom:1em\">"
+  "<button type=\"submit\">Avvia connessione con il veicolo</button></form>"
+  "<p><small>Collega il cavo OBD2 all&apos;auto e clicca il pulsante sopra per avviare una nuova sessione diagnostica. I dati appariranno nella dashboard.</small></p>"
+  "<hr style=\"margin:1em 0\">"
   "<form method=\"POST\" action=\"/reconfigure\">"
   "<button type=\"submit\">Apri configurazione (WiFi / Server / API key)</button></form>"
   "<p><small>Il dispositivo si riavvierà in hotspot EV-Diagnostic-XXXX. Connettiti e apri <strong>http://192.168.4.1</strong></small></p>"
@@ -136,6 +141,19 @@ static void handleReconfigurePage() {
   char buf[640];
   snprintf(buf, sizeof(buf), RECONFIGURE_HTML, WiFi.localIP().toString().c_str());
   s_reconfigureServer->send(200, "text/html", buf);
+}
+
+static void handleStartSession() {
+  if (!s_reconfigureServer) return;
+  if (s_reconfigureServer->method() != HTTP_POST) {
+    s_reconfigureServer->send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+  sessionForceNew();
+  s_reconfigureServer->send(200, "text/html",
+    "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>"
+    "<p>Connessione con il veicolo avviata. La prossima trasmissione creer&agrave; una nuova sessione nella dashboard.</p>"
+    "<p><a href=\"/\">Torna alla pagina principale</a></p></body></html>");
 }
 
 static void handleReconfigure() {
@@ -158,6 +176,7 @@ void wifiStartReconfigureServer() {
   if (s_reconfigureServer) return;
   s_reconfigureServer = new WebServer(80);
   s_reconfigureServer->on("/", handleReconfigurePage);
+  s_reconfigureServer->on("/start-session", HTTP_POST, handleStartSession);
   s_reconfigureServer->on("/reconfigure", HTTP_POST, handleReconfigure);
   s_reconfigureServer->begin();
 }

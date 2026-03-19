@@ -8,6 +8,7 @@ import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
 import { DTCListCompact } from "@/components/dashboard/DTCListCompact";
 import { AIPanel } from "@/components/dashboard/AIPanel";
+import { CanSnifferPanel } from "@/components/dashboard/CanSnifferPanel";
 import { CellGrid } from "@/components/battery/CellGrid";
 import { EmptyState } from "@/components/common/EmptyState";
 import { RefreshButton } from "@/components/dashboard/RefreshButton";
@@ -19,6 +20,8 @@ type SessionRow = {
   started_at: string;
   raw_dtc: string[] | null;
   ai_diagnosis: string | null;
+  vin: string | null;
+  vin_decoded: { make?: string; model?: string; year?: number } | null;
   vehicles: { make: string; model: string } | { make: string; model: string }[] | null;
 };
 
@@ -30,15 +33,20 @@ function buildVehicleInfo(session: SessionRow | null): VehicleInfo {
       connected: false,
     };
   }
+  const decoded = session.vin_decoded;
   const v = session.vehicles;
   const vehicle = Array.isArray(v) ? v[0] : v;
-  const name = vehicle
-    ? `${vehicle.make} ${vehicle.model}`
-    : session.device_id;
+  const name = decoded?.make && decoded?.model
+    ? `${decoded.make} ${decoded.model}${decoded.year ? ` (${decoded.year})` : ""}`
+    : vehicle
+      ? `${vehicle.make} ${vehicle.model}`
+      : session.device_id;
   return {
     name,
     meta: `Sessione ${session.id.slice(0, 8)} · ${session.started_at ? new Date(session.started_at).toLocaleString("it-IT") : "—"}`,
     connected: true,
+    ...(session.vin && { vin: session.vin }),
+    ...(decoded && { vinDecoded: { make: decoded.make, model: decoded.model, year: decoded.year } }),
   };
 }
 
@@ -67,14 +75,29 @@ export default async function DashboardPage() {
   let batteryReading: BatteryReading | null = null;
   let dashboardMetrics: MetricItem[] = [];
   let aiMessages: AIMessage[] = [];
+  let deviceIds: string[] = [];
 
   if (supabase) {
     const { data: sessionData } = await supabase
       .from("sessions")
-      .select("id, device_id, vehicle_id, started_at, raw_dtc, ai_diagnosis, vehicles(make, model)")
+      .select("id, device_id, vehicle_id, started_at, raw_dtc, ai_diagnosis, vin, vin_decoded, vehicles(make, model)")
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle();
+
+    const { data: sessionsForDevices } = await supabase
+      .from("sessions")
+      .select("device_id")
+      .order("started_at", { ascending: false })
+      .limit(100);
+    const seen = new Set<string>();
+    for (const s of sessionsForDevices ?? []) {
+      const id = (s as { device_id?: string }).device_id?.trim();
+      if (id && !seen.has(id)) {
+        seen.add(id);
+        deviceIds.push(id);
+      }
+    }
 
     if (sessionData) {
       session = sessionData as unknown as SessionRow;
@@ -250,6 +273,13 @@ export default async function DashboardPage() {
               )}
             </SectionCard>
           </div>
+
+          <SectionCard title="CAN Sniffer" action={null}>
+            <CanSnifferPanel
+              deviceId={session?.device_id ?? null}
+              deviceIds={deviceIds}
+            />
+          </SectionCard>
         </>
       )}
     </div>

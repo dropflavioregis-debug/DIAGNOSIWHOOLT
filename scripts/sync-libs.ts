@@ -8,7 +8,7 @@ import { execSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { LIBRARY_SOURCES } from "./sources.js";
+import { LIBRARY_SOURCES, type LibrarySource } from "./sources.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
@@ -28,7 +28,7 @@ function slugFromName(name: string): string {
     .slice(0, 40);
 }
 
-function cloneOrPull(repo: string, destDir: string): boolean {
+function cloneOrPull(repo: string, destDir: string, src?: LibrarySource): boolean {
   if (fs.existsSync(destDir)) {
     try {
       execSync("git pull --rebase", { cwd: destDir, stdio: "pipe" });
@@ -39,7 +39,24 @@ function cloneOrPull(repo: string, destDir: string): boolean {
   }
   try {
     fs.mkdirSync(path.dirname(destDir), { recursive: true });
-    execSync(`git clone --depth 1 "${repo}" "${destDir}"`, { stdio: "pipe" });
+    const sparse = src?.sparseCheckout?.length;
+    const noSubmodules = src?.format === "can_reference";
+    if (sparse) {
+      execSync(
+        `git clone --depth 1 --filter=blob:none --sparse "${repo}" "${destDir}"`,
+        { stdio: "pipe" }
+      );
+      execSync(`git sparse-checkout set ${src!.sparseCheckout!.join(" ")}`, {
+        cwd: destDir,
+        stdio: "pipe",
+      });
+    } else if (noSubmodules) {
+      execSync(`git clone --depth 1 --no-recurse-submodules "${repo}" "${destDir}"`, {
+        stdio: "pipe",
+      });
+    } else {
+      execSync(`git clone --depth 1 "${repo}" "${destDir}"`, { stdio: "pipe" });
+    }
     return true;
   } catch {
     return false;
@@ -58,7 +75,7 @@ function main() {
     }
     const slug = slugFromRepo(src.repo) || slugFromName(src.name);
     const dest = path.join(LIBS_SOURCES_DIR, slug);
-    const ok = cloneOrPull(src.repo, dest);
+    const ok = cloneOrPull(src.repo, dest, src);
     console.log(ok ? `OK ${slug}` : `FAIL ${slug} (${src.repo})`);
   }
 

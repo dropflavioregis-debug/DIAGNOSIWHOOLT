@@ -80,6 +80,13 @@ OtaResult otaCheckAndUpdate(const char* serverUrl, const char* apiKey) {
   HTTPClient httpBin;
   httpBin.begin(binUrl);
   httpBin.setTimeout(60000);
+  int getCode = httpBin.GET();
+  if (getCode != 200) {
+    r.error = true;
+    r.message = "Binary download failed";
+    httpBin.end();
+    return r;
+  }
   int len = httpBin.getSize();
   if (len <= 0 || len > (int)0x140000) {
     r.error = true;

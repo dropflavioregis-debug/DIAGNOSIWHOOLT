@@ -37,6 +37,19 @@ export default function TestPage() {
   const [lanIp, setLanIp] = useState("");
   const [lanResult, setLanResult] = useState<TestResult | null>(null);
   const [lanLoading, setLanLoading] = useState(false);
+  const [vin, setVin] = useState("");
+  const [vinLoading, setVinLoading] = useState(false);
+  const [vinResult, setVinResult] = useState<{ ok: boolean; result?: unknown; error?: string } | null>(null);
+  const [canIds, setCanIds] = useState("");
+  const [detectLoading, setDetectLoading] = useState(false);
+  const [detectResult, setDetectResult] = useState<{
+    ok: boolean;
+    vehicle_id?: string;
+    make?: string;
+    model?: string;
+    lib_url?: string;
+    error?: string;
+  } | null>(null);
 
   const testDatabase = async () => {
     setDbLoading(true);
@@ -137,6 +150,73 @@ export default function TestPage() {
       });
     } finally {
       setLanLoading(false);
+    }
+  };
+
+  const testVinDecode = async () => {
+    const normalizedVin = vin.trim().toUpperCase();
+    if (normalizedVin.length !== 17) {
+      setVinResult({ ok: false, error: "VIN non valido: servono 17 caratteri." });
+      return;
+    }
+    setVinLoading(true);
+    setVinResult(null);
+    try {
+      const res = await fetch("/api/vin/decode", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ vin: normalizedVin }),
+      });
+      const data = (await res.json()) as { ok?: boolean; result?: unknown; error?: string };
+      setVinResult({
+        ok: Boolean(data.ok),
+        result: data.result,
+        error: data.error,
+      });
+    } catch {
+      setVinResult({ ok: false, error: "Errore di rete" });
+    } finally {
+      setVinLoading(false);
+    }
+  };
+
+  const testVehicleDetect = async () => {
+    const parsedIds = canIds
+      .split(/[,\s]+/)
+      .map((x) => x.trim())
+      .filter(Boolean);
+    if (parsedIds.length === 0) {
+      setDetectResult({ ok: false, error: "Inserisci almeno un CAN ID (es. 5A3, 18DAF110)." });
+      return;
+    }
+    setDetectLoading(true);
+    setDetectResult(null);
+    try {
+      const res = await fetch("/api/vehicle/detect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ can_ids: parsedIds }),
+      });
+      const data = (await res.json()) as {
+        ok?: boolean;
+        vehicle_id?: string;
+        make?: string;
+        model?: string;
+        lib_url?: string;
+        error?: string;
+      };
+      setDetectResult({
+        ok: Boolean(data.ok),
+        vehicle_id: data.vehicle_id,
+        make: data.make,
+        model: data.model,
+        lib_url: data.lib_url,
+        error: data.error,
+      });
+    } catch {
+      setDetectResult({ ok: false, error: "Errore di rete" });
+    } finally {
+      setDetectLoading(false);
     }
   };
 
@@ -269,6 +349,91 @@ export default function TestPage() {
             <p className="font-medium">{lanResult.ok ? "OK" : "Non raggiungibile"}</p>
             <p className="mt-0.5">{lanResult.message}</p>
             {lanResult.detail && <p className="mt-1 text-[11px] opacity-90">{lanResult.detail}</p>}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Tool: Decodifica VIN">
+        <p className="text-xs text-[var(--color-text-secondary)] mb-3">
+          Verifica l&apos;endpoint <code className="rounded bg-[var(--color-background-secondary)] px-1">/api/vin/decode</code>
+          con un VIN reale (17 caratteri).
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={vin}
+            onChange={(e) => setVin(e.target.value)}
+            placeholder="KMHE341DBRA000000"
+            className="w-64 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-primary)] px-2.5 py-2 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
+          />
+          <button
+            type="button"
+            onClick={testVinDecode}
+            disabled={vinLoading}
+            className="rounded-md border border-[var(--color-border-secondary)] bg-transparent px-4 py-2 text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-background-secondary)] disabled:opacity-50"
+          >
+            {vinLoading ? "Decode…" : "Decodifica VIN"}
+          </button>
+        </div>
+        {vinResult && (
+          <div
+            className="mt-3 rounded-md px-3 py-2.5 text-xs"
+            style={{
+              background: vinResult.ok ? "var(--green-50)" : "var(--red-50)",
+              color: vinResult.ok ? "var(--green-800)" : "var(--red-800)",
+            }}
+          >
+            <p className="font-medium">{vinResult.ok ? "OK" : "Errore"}</p>
+            {vinResult.ok ? (
+              <pre className="mt-1 overflow-auto whitespace-pre-wrap text-[11px] opacity-90">
+                {JSON.stringify(vinResult.result, null, 2)}
+              </pre>
+            ) : (
+              <p className="mt-0.5">{vinResult.error ?? "Decode failed"}</p>
+            )}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard title="Tool: Rilevamento veicolo da CAN ID">
+        <p className="text-xs text-[var(--color-text-secondary)] mb-3">
+          Verifica <code className="rounded bg-[var(--color-background-secondary)] px-1">/api/vehicle/detect</code> inserendo
+          CAN ID separati da virgola o spazio.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <input
+            type="text"
+            value={canIds}
+            onChange={(e) => setCanIds(e.target.value)}
+            placeholder="5A3, 7E0, 18DAF110"
+            className="w-64 rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-primary)] px-2.5 py-2 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
+          />
+          <button
+            type="button"
+            onClick={testVehicleDetect}
+            disabled={detectLoading}
+            className="rounded-md border border-[var(--color-border-secondary)] bg-transparent px-4 py-2 text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-background-secondary)] disabled:opacity-50"
+          >
+            {detectLoading ? "Rilevamento…" : "Rileva veicolo"}
+          </button>
+        </div>
+        {detectResult && (
+          <div
+            className="mt-3 rounded-md px-3 py-2.5 text-xs"
+            style={{
+              background: detectResult.ok ? "var(--green-50)" : "var(--red-50)",
+              color: detectResult.ok ? "var(--green-800)" : "var(--red-800)",
+            }}
+          >
+            <p className="font-medium">{detectResult.ok ? "OK" : "Errore"}</p>
+            {detectResult.ok ? (
+              <p className="mt-0.5">
+                {detectResult.make} {detectResult.model} — {detectResult.vehicle_id}
+                {detectResult.lib_url ? ` (${detectResult.lib_url})` : ""}
+              </p>
+            ) : (
+              <p className="mt-0.5">{detectResult.error ?? "Vehicle detection failed"}</p>
+            )}
           </div>
         )}
       </SectionCard>

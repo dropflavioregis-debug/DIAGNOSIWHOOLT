@@ -16,6 +16,12 @@ type SessionItem = {
   ai_diagnosis: string | null;
 };
 
+type SessionsMetrics = {
+  total_distance_km: number;
+  total_energy_kwh: number;
+  computed_from_readings: boolean;
+};
+
 function formatSessionStarted(iso: string): string {
   try {
     const d = new Date(iso);
@@ -36,23 +42,95 @@ export default function SessionsPage() {
   const [search, setSearch] = useState("");
   const [openId, setOpenId] = useState<string | null>(null);
   const [sessions, setSessions] = useState<SessionItem[]>([]);
+  const [showStartModal, setShowStartModal] = useState(false);
+  const [devices, setDevices] = useState<string[]>([]);
+  const [selectedDevice, setSelectedDevice] = useState("");
+  const [commandSending, setCommandSending] = useState(false);
+  const [commandMessage, setCommandMessage] = useState<string | null>(null);
+  const [metrics, setMetrics] = useState<SessionsMetrics>({
+    total_distance_km: 0,
+    total_energy_kwh: 0,
+    computed_from_readings: false,
+  });
 
   useEffect(() => {
     fetch("/api/sessions")
       .then((res) => res.json())
-      .then((data: { sessions?: SessionItem[] }) => {
+      .then((data: { sessions?: SessionItem[]; metrics?: SessionsMetrics }) => {
         setSessions(Array.isArray(data.sessions) ? data.sessions : []);
+        if (data.metrics && typeof data.metrics === "object") {
+          setMetrics({
+            total_distance_km:
+              typeof data.metrics.total_distance_km === "number" ? data.metrics.total_distance_km : 0,
+            total_energy_kwh:
+              typeof data.metrics.total_energy_kwh === "number" ? data.metrics.total_energy_kwh : 0,
+            computed_from_readings: Boolean(data.metrics.computed_from_readings),
+          });
+        }
       })
-      .catch(() => setSessions([]));
+      .catch(() => {
+        setSessions([]);
+        setMetrics({ total_distance_km: 0, total_energy_kwh: 0, computed_from_readings: false });
+      });
   }, []);
+
+  useEffect(() => {
+    if (!showStartModal) return;
+    setCommandMessage(null);
+    fetch("/api/device/commands")
+      .then((res) => res.json())
+      .then((data: { devices?: string[] }) => {
+        const list = Array.isArray(data.devices) ? data.devices : [];
+        setDevices(list);
+        setSelectedDevice(list[0] ?? "");
+      })
+      .catch(() => setDevices([]));
+  }, [showStartModal]);
+
+  async function sendStartSessionCommand() {
+    if (!selectedDevice) return;
+    setCommandSending(true);
+    setCommandMessage(null);
+    try {
+      const res = await fetch("/api/device/commands", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ device_id: selectedDevice, command: "start_session" }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string; message?: string };
+      if (data.ok) {
+        setCommandMessage("Comando inviato. Il dispositivo lo riceverà entro ~15 s e avvierà una nuova sessione.");
+      } else {
+        setCommandMessage(data.error ?? "Errore invio comando");
+      }
+    } catch {
+      setCommandMessage("Errore di rete");
+    } finally {
+      setCommandSending(false);
+    }
+  }
 
   const totalSessions = sessions.length;
   const activeSession = sessions.find((s) => !s.ended_at);
 
   const sessionMetrics: MetricItem[] = [
     { label: "Sessioni totali", value: totalSessions, unit: "", barPct: totalSessions > 0 ? 100 : 0, barColor: "#378ADD", sub: totalSessions > 0 ? "In database" : "Nessuna sessione" },
-    { label: "km totali loggati", value: 0, unit: "", barPct: 0, barColor: "#1D9E75", sub: "—" },
-    { label: "kWh consumati", value: 0, unit: "", barPct: 0, barColor: "#EF9F27", sub: "—" },
+    {
+      label: "km totali loggati",
+      value: metrics.total_distance_km,
+      unit: "",
+      barPct: metrics.total_distance_km > 0 ? 100 : 0,
+      barColor: "#1D9E75",
+      sub: metrics.computed_from_readings ? "Da letture segnali" : "Dati non disponibili",
+    },
+    {
+      label: "kWh consumati",
+      value: metrics.total_energy_kwh,
+      unit: "",
+      barPct: metrics.total_energy_kwh > 0 ? 100 : 0,
+      barColor: "#EF9F27",
+      sub: metrics.computed_from_readings ? "Da letture segnali" : "Dati non disponibili",
+    },
   ];
 
   const list = sessions.map((s) => ({
@@ -68,10 +146,119 @@ export default function SessionsPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-base font-medium text-[var(--color-text-primary)]">Sessioni</h1>
-        <p className="text-xs text-[var(--color-text-secondary)]">Cronologia sessioni diagnostica</p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h1 className="text-base font-medium text-[var(--color-text-primary)]">Sessioni</h1>
+          <p className="text-xs text-[var(--color-text-secondary)]">Cronologia sessioni diagnostica</p>
+        </div>
+        <button
+          type="button"
+          onClick={() => setShowStartModal(true)}
+          className="rounded-[var(--border-radius-md)] px-3 py-2 text-xs font-medium transition-colors"
+          style={{
+            background: "var(--teal-500)",
+            color: "white",
+            border: "none",
+          }}
+        >
+          Avvia diagnosi
+        </button>
       </div>
+
+      {showStartModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: "rgba(0,0,0,0.5)" }}
+          onClick={() => setShowStartModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="start-diagnostic-title"
+        >
+          <div
+            className="max-w-md rounded-[var(--border-radius-md)] p-5 shadow-lg"
+            style={{ background: "var(--color-background-primary)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="start-diagnostic-title" className="mb-3 text-sm font-medium" style={{ color: "var(--color-text-primary)" }}>
+              Avvia connessione con il veicolo
+            </h2>
+            <ol className="mb-4 list-decimal space-y-2 pl-4 text-xs" style={{ color: "var(--color-text-secondary)" }}>
+              <li>Collega l’ESP32 alla presa OBD2 del veicolo (accendi l’auto se necessario).</li>
+              <li>Assicurati che il dispositivo sia sulla stessa rete WiFi del server (o che abbia già inviato dati).</li>
+              <li>Apri la pagina del dispositivo nel browser: <strong style={{ color: "var(--color-text-primary)" }}>http://&lt;IP del dispositivo&gt;</strong> (l’IP è stampato sul monitor seriale oppure nella lista dispositivi del router).</li>
+              <li>Clicca <strong style={{ color: "var(--color-text-primary)" }}>«Avvia connessione con il veicolo»</strong> sulla pagina del dispositivo.</li>
+              <li>La nuova sessione apparirà qui sotto entro pochi secondi.</li>
+            </ol>
+            <p className="mb-4 text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+              Per cambiare WiFi, URL server o API key usa il pulsante «Apri configurazione» sulla pagina del dispositivo.
+            </p>
+
+            <div
+              className="mb-4 rounded-[var(--border-radius-md)] py-3 pr-3 pl-3"
+              style={{ border: "0.5px solid var(--color-border-secondary)", background: "var(--color-background-secondary)" }}
+            >
+              <div className="mb-2 text-xs font-medium" style={{ color: "var(--color-text-primary)" }}>
+                Invia comando dal web
+              </div>
+              <p className="mb-2 text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
+                Scegli il dispositivo e invia «Avvia sessione». Il dispositivo riceverà il comando al prossimo polling (max ~15 s).
+              </p>
+              {devices.length === 0 ? (
+                <p className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+                  Nessun dispositivo in lista. Avvia almeno una sessione dal dispositivo per vederlo qui.
+                </p>
+              ) : (
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={selectedDevice}
+                    onChange={(e) => setSelectedDevice(e.target.value)}
+                    className="rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] px-2.5 py-1.5 text-xs"
+                    style={{ border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)" }}
+                  >
+                    {devices.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    disabled={commandSending}
+                    onClick={sendStartSessionCommand}
+                    className="rounded-[var(--border-radius-md)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                    style={{ background: "var(--teal-500)", color: "white", border: "none" }}
+                  >
+                    {commandSending ? "Invio…" : "Avvia sessione su questo dispositivo"}
+                  </button>
+                </div>
+              )}
+              {commandMessage && (
+                <p className="mt-2 text-[11px]" style={{ color: "var(--teal-600)" }}>
+                  {commandMessage}
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <a
+                href="/device"
+                className="rounded-[var(--border-radius-md)] px-3 py-1.5 text-xs transition-colors"
+                style={{ border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)", textDecoration: "none" }}
+              >
+                Pagina dispositivo
+              </a>
+              <button
+                type="button"
+                onClick={() => setShowStartModal(false)}
+                className="rounded-[var(--border-radius-md)] px-3 py-1.5 text-xs font-medium transition-colors"
+                style={{ background: "var(--color-background-secondary)", color: "var(--color-text-primary)", border: "none" }}
+              >
+                Chiudi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         {sessionMetrics.map((m) => (

@@ -25,7 +25,7 @@ export default function DevicePage() {
 
       <SectionCard title="Come configurare l’ESP32">
         <p className="text-xs text-[var(--color-text-secondary)] mb-4">
-          La configurazione (WiFi, URL server, API key) si fa <strong className="text-[var(--color-text-primary)]">sul dispositivo</strong>, non da qui. Il dashboard non invia dati all’ESP32.
+          La configurazione (WiFi, URL server, API key) si fa <strong className="text-[var(--color-text-primary)]">sul dispositivo</strong> (captive portal). Da qui invece puoi inviare comandi all’ESP32 tramite database: <strong className="text-[var(--color-text-primary)]">Avvia sessione</strong> (pagina Sessioni) e <strong className="text-[var(--color-text-primary)]">CAN Sniffer</strong> (dashboard). L’ESP32 riceve i comandi al prossimo poll senza bisogno di riprogrammarlo.
         </p>
         <ol className="list-decimal list-inside text-xs text-[var(--color-text-secondary)] space-y-2 mb-4">
           <li>Alla prima accensione senza WiFi, l’ESP32 crea l’hotspot <strong className="text-[var(--color-text-primary)]">EV-Diagnostic-XXXX</strong> (XXXX = ultimi 4 caratteri del MAC).</li>

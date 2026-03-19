@@ -14,6 +14,12 @@ export default function ConfigPage() {
         </Link>.
       </p>
       <p className="text-xs text-[var(--color-text-secondary)]">
+        Panoramica delle API e protocolli effettivi (webapp, firmware, interno):{" "}
+        <Link href="/backend" className="text-[var(--color-text-info)] underline hover:no-underline">
+          API & Protocolli
+        </Link>.
+      </p>
+      <p className="text-xs text-[var(--color-text-secondary)]">
         Per verificare database e endpoint ESP32:{" "}
         <Link href="/test" className="text-[var(--color-text-info)] underline hover:no-underline">
           Test connessioni

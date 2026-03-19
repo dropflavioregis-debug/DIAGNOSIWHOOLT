@@ -15,10 +15,15 @@ bool sendRequest(const uint8_t* req, size_t len);
 // Receive UDS response (single frame, timeout ms). Returns payload length or 0 on timeout/error.
 size_t receiveResponse(uint8_t* out, size_t maxLen, uint32_t timeoutMs);
 
+// Receive UDS response with ISO-TP multi-frame (single, first+consecutive). Returns total payload length or 0.
+size_t receiveResponseLong(uint8_t* out, size_t maxLen, uint32_t timeoutMs);
+
 // High-level services (build request, send, receive, return success)
 bool diagnosticSessionControl(uint8_t subFunc);
 bool testerPresent();
 bool readDataByIdentifier(uint16_t did, uint8_t* outData, size_t maxLen, size_t* outLen);
+// Read VIN via UDS (DID). Writes up to 18 bytes (17 chars + NUL) into outVin. Returns true if 17 chars read.
+bool readVin(uint16_t didVin, char* outVin, size_t outSize);
 bool readDTC(uint8_t* outData, size_t maxLen, size_t* outLen);
 bool clearDTC();
 

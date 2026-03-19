@@ -65,6 +65,15 @@ export function VehicleStrip({ vehicle }: VehicleStripProps) {
         >
           {vehicle.meta}
         </div>
+        {vehicle.vin && (
+          <div
+            className="text-[11px] font-mono"
+            style={{ color: "var(--color-text-secondary)", marginTop: "2px" }}
+            title={vehicle.vin}
+          >
+            VIN: {vehicle.vin.slice(0, 4)}…{vehicle.vin.slice(-4)}
+          </div>
+        )}
       </div>
       {vehicle.connected && (
         <div className="flex shrink-0 items-center gap-2">

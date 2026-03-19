@@ -1,0 +1,24 @@
+{
+  "source": "https://github.com/dalathegreat/leaf_can_bus_messages",
+  "description": "Nissan LEAF CAN polling: control unit query/response IDs for UDS (Consult3+ and vehicle modules). Availability varies by model year (e.g. SHIFT only on ZE0).",
+  "ecus": [
+    { "name": "Consult3+", "queryId": "0x7D2", "responseId": null },
+    { "name": "VCM", "queryId": "0x797", "responseId": "0x79A" },
+    { "name": "BCM", "queryId": "0x745", "responseId": "0x765" },
+    { "name": "ABS", "queryId": "0x740", "responseId": "0x760" },
+    { "name": "LBC (BMS)", "queryId": "0x79B", "responseId": "0x7BB" },
+    { "name": "INVERTER/MC", "queryId": "0x784", "responseId": "0x78C" },
+    { "name": "M&A (Meter)", "queryId": "0x743", "responseId": "0x763" },
+    { "name": "HVAC", "queryId": "0x744", "responseId": "0x764" },
+    { "name": "BRAKE", "queryId": "0x70E", "responseId": "0x70F" },
+    { "name": "VSP", "queryId": "0x73F", "responseId": "0x761" },
+    { "name": "EPS", "queryId": "0x742", "responseId": "0x762" },
+    { "name": "TCU", "queryId": "0x746", "responseId": "0x783" },
+    { "name": "Multi AV", "queryId": "0x747", "responseId": "0x767" },
+    { "name": "IPDM E/R", "queryId": "0x74D", "responseId": "0x76D" },
+    { "name": "AIRBAG", "queryId": "0x752", "responseId": "0x772" },
+    { "name": "CHARGER", "queryId": "0x792", "responseId": "0x793" },
+    { "name": "SHIFT", "queryId": "0x79D", "responseId": "0x7BD" },
+    { "name": "AVM", "queryId": "0x7B7", "responseId": null }
+  ]
+}

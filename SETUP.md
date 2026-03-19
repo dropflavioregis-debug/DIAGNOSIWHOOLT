@@ -107,7 +107,7 @@ export SUPABASE_SERVICE_ROLE_KEY="la-tua-service-role-key"
 npm run sync-to-vercel
 ```
 
-Questo: clona i repo in `libs-sources/`, converte CSV/DBC in JSON, importa i dati in **Database** (vehicles, signals, dtc) e carica i file in **Storage** (bucket `libs`). Dopo il deploy, Vercel userà solo Supabase.
+Questo: clona i repo in `libs-sources/` (incl. Nissan LEAF CAN da dalathegreat/leaf_can_bus_messages), converte CSV/DBC in JSON, importa i dati in **Database** (vehicles, signals, dtc) e carica i file in **Storage** (bucket `libs`). Dopo il deploy, Vercel userà solo Supabase.
 
 ---
 
@@ -126,7 +126,36 @@ Se `SITE_PASSWORD` non è impostata, il sito resta accessibile senza login.
 
 ---
 
-## 8. Riferimenti
+## 8. Salvataggio su database (Supabase)
+
+I dati vengono persistiti su Supabase quando le variabili `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` (o `NEXT_PUBLIC_SUPABASE_URL` + chiave) sono configurate nel backend (Vercel / `.env` della web).
+
+### Tabelle e chi le popola
+
+| Tabella | Scrittura | Descrizione |
+|--------|-----------|--------------|
+| **sessions** | `POST /api/ingest` | Sessioni diagnostica: `device_id`, `vehicle_id`, `can_fingerprint`, `raw_dtc`, `vin`, `vin_decoded`. Creazione alla prima chiamata ingest; aggiornamento su chiamate successive con stesso `session_id`. |
+| **readings** | `POST /api/ingest` | Letture parametri (time series): `session_id`, `signal_id`, `value`, `raw_value`. Inserite in batch quando l’ingest invia `readings[]`. |
+| **device_commands** | Web → `POST /api/device/commands`; dispositivo legge con `GET /api/device/commands?device_id=...` | Comandi dalla webapp al dispositivo (es. start/stop sniffer). Il dispositivo fa polling, marca `acknowledged_at` quando li ha letti. |
+| **can_frames** | `POST /api/can-sniffer/stream` (ESP32 sniffer) | Frame CAN raw: `device_id`, `session_id` (opzionale), `can_id`, `extended`, `len`, `data_hex`. Fino a 500 frame per richiesta persistiti; il resto resta in memoria per la dashboard. |
+| **vehicles** | Script / `POST /api/libs/import`, `upload`, `import-from-storage` | Veicoli e librerie DID/DTC (da import libs). |
+| **signals** | Come sopra | Segnali per veicolo (DID, formula, unit, category). |
+| **dtc** | Come sopra | Codici DTC per veicolo. |
+
+### Flusso principale (firmware → DB)
+
+1. L’ESP32 invia **POST /api/ingest** con `device_id`, opzionalmente `session_id`, `vehicle_id`, `can_fingerprint`, `vin`, `raw_dtc`, `readings`.
+2. Se non c’è `session_id`, l’API crea una riga in **sessions** e restituisce `session_id`.
+3. Le chiamate successive con lo stesso `session_id` aggiornano la sessione (es. `raw_dtc`, `vin`, `vin_decoded`) e possono aggiungere righe in **readings**.
+4. I **readings** devono avere `signal_id` (UUID dalla tabella `signals`) e `value` numerico; vengono filtrati e inseriti in batch.
+
+Quando l’ESP32 invia frame CAN allo **sniffer** (**POST /api/can-sniffer/stream**), oltre alla memoria in-memory per la dashboard vengono scritti in **can_frames** (fino a 500 per richiesta). Opzionale: nel body si può passare `session_id` per collegare i frame a una sessione (export per sessione).
+
+Se Supabase non è configurato, l’ingest risponde comunque `200` con messaggio che i dati non sono stati persistiti; lo stream sniffer risponde `200` con `persisted: 0`.
+
+---
+
+## 9. Riferimenti
 
 - **README.md** — panoramica progetto, web, API, script.
 - **ev-diagnostic-plan.md** — piano completo e step (Supabase, Vercel, script, firmware).

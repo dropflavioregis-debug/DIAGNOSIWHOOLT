@@ -12,6 +12,7 @@ export const NAV_SECTIONS = [
   {
     label: "Configurazione",
     items: [
+      { href: "/backend", label: "API & Protocolli", icon: "backend" },
       { href: "/libs", label: "Librerie", icon: "libs" },
       { href: "/device", label: "Dispositivo", icon: "device" },
       { href: "/config", label: "Config", icon: "config" },

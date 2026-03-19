@@ -82,6 +82,15 @@ async function ensureVehicle(
   if (existing?.id) {
     await supabase.from("signals").delete().eq("vehicle_id", existing.id);
     await supabase.from("dtc").delete().eq("vehicle_id", existing.id);
+    await supabase
+      .from("vehicles")
+      .update({
+        can_ids: lib.can_ids ?? null,
+        year_from: lib.year_from ?? null,
+        year_to: lib.year_to ?? null,
+        source_repo: sourceFile,
+      })
+      .eq("id", existing.id);
     return existing.id;
   }
 

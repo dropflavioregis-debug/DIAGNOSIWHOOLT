@@ -2,6 +2,10 @@ export interface VehicleInfo {
   name: string;
   meta: string;
   connected: boolean;
+  /** Raw VIN (17 chars) when present from UDS/CAN */
+  vin?: string;
+  /** Corgi decode: make, model, year */
+  vinDecoded?: { make?: string; model?: string; year?: number };
 }
 
 export interface MetricItem {

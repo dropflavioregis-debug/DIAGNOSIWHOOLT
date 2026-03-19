@@ -50,6 +50,17 @@ function isVehicleLibPayload(obj: unknown): obj is VehicleLibPayload {
 }
 
 export async function POST() {
+  if (process.env.VERCEL === "1") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error:
+          "Import da filesystem locale non disponibile su Vercel. Usa Import da URL o upload file dalla pagina Libs.",
+      },
+      { status: 400 }
+    );
+  }
+
   const supabase = getSupabase();
   if (!supabase) {
     return NextResponse.json({ ok: false, error: "Database non configurato" }, { status: 503 });

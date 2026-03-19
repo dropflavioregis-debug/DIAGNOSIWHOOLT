@@ -9,6 +9,8 @@ export interface LibrarySource {
   format: string;
   covers?: string[];
   priority: number;
+  /** If set, clone with sparse-checkout (only these paths). Saves space for large repos (e.g. OVMS3). */
+  sparseCheckout?: string[];
 }
 
 export const LIBRARY_SOURCES: LibrarySource[] = [
@@ -42,6 +44,7 @@ export const LIBRARY_SOURCES: LibrarySource[] = [
     format: "cpp_vehicle_modules",
     covers: ["Nissan Leaf", "Renault Zoe", "Tesla Model S", "VW e-Golf", "Smart ED"],
     priority: 2,
+    sparseCheckout: ["vehicle", "plugin"],
   },
   {
     name: "prototux - PSA CAN Reverse Engineering",
@@ -67,6 +70,14 @@ export const LIBRARY_SOURCES: LibrarySource[] = [
     priority: 1,
   },
   {
+    name: "dalathegreat - Nissan LEAF CAN",
+    repo: "https://github.com/dalathegreat/leaf_can_bus_messages.git",
+    type: "single_repo",
+    format: "dbc",
+    covers: ["Nissan Leaf"],
+    priority: 1,
+  },
+  {
     name: "EVNotify - VW MEB Signals",
     repo: "https://github.com/EVNotify/EVNotify",
     type: "single_repo",
@@ -79,6 +90,46 @@ export const LIBRARY_SOURCES: LibrarySource[] = [
     repo: "https://github.com/open-ev-data/open-ev-data-dataset",
     type: "single_repo",
     format: "json_ev_specs",
+    priority: 2,
+  },
+  {
+    name: "Awesome EV Charging - Protocolli e risorse EV",
+    repo: "https://github.com/juherr/awesome-ev-charging.git",
+    type: "single_repo",
+    format: "awesome_list",
+    covers: ["OCPP", "OCPI", "ISO 15118", "OICP", "eMI³", "Eichrecht", "CAN/charging"],
+    priority: 2,
+  },
+  {
+    name: "davefiddes - OpenInverter CAN tool",
+    repo: "https://github.com/davefiddes/openinverter-can-tool",
+    type: "single_repo",
+    format: "python_openinverter_tool",
+    covers: ["OpenInverter", "stm32-sine", "Foccci/Clara", "Stm32-vcu", "Flying ADC BMS"],
+    priority: 2,
+  },
+  {
+    name: "HeadlessZombie - VCU CAN reference",
+    repo: "https://github.com/jetpax/HeadlessZombie.git",
+    type: "single_repo",
+    format: "can_reference",
+    covers: ["BMW E39", "BMW E46", "BMW E65", "BMW E31", "VAG", "Nissan Leaf", "OBD2", "OpenInverter"],
+    priority: 2,
+  },
+  {
+    name: "MotorvateDIY - ESP32 RET SD (CAN reverse engineering)",
+    repo: "https://github.com/MotorvateDIY/ESP32_RET_SD.git",
+    type: "single_repo",
+    format: "esp32_ret_firmware",
+    covers: ["CAN logging", "SavvyCAN", "GVRET", "SD card", "reverse engineering"],
+    priority: 2,
+  },
+  {
+    name: "SavvyCAN - Qt CAN bus tool",
+    repo: "https://github.com/collin80/SavvyCAN.git",
+    type: "single_repo",
+    format: "savvycan_reference",
+    covers: ["CAN log formats", "GVRET", "CRTD", "CSV import/export"],
     priority: 2,
   },
 ];
