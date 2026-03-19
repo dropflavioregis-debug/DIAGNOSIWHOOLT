@@ -53,6 +53,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             />
             ESP32-S3 connesso
           </div>
+          <form action="/api/auth/logout" method="POST" className="mt-2">
+            <button
+              type="submit"
+              className="text-[11px] text-[var(--color-text-secondary)] underline hover:text-[var(--color-text-primary)]"
+            >
+              Esci
+            </button>
+          </form>
         </div>
       </aside>
       <main

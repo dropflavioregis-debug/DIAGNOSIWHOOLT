@@ -95,7 +95,22 @@ Così puoi cambiare impostazioni quando vuoi senza ricollegare il cavo USB.
 
 ---
 
-## 6. Riferimenti
+## 6. Protezione con password (sito su Vercel)
+
+Se l’app è pubblica su Vercel e vuoi limitare l’accesso alla sola web UI:
+
+1. In **Vercel** → progetto → **Settings → Environment Variables** aggiungi:
+   - Nome: `SITE_PASSWORD`
+   - Valore: la password che gli utenti dovranno inserire per accedere
+2. Ridistribuisci il deploy.
+
+Quando `SITE_PASSWORD` è impostata, tutte le pagine (home, dashboard, sessioni, ecc.) richiedono l’accesso da **/login**. Le route **/api/*** (ingest, sessions, firmware, vehicle detect, libs, ecc.) **non** sono mai bloccate dal middleware: l’ESP32 continua a funzionare normalmente e può inviare dati a `/api/ingest` e usare le altre API senza cookie di login (eventualmente protette da `API_KEY`). Dalla sidebar dell’app è disponibile il link **Esci** per uscire e richiedere di nuovo la password.
+
+Se `SITE_PASSWORD` non è impostata, il sito resta accessibile senza login.
+
+---
+
+## 7. Riferimenti
 
 - **README.md** — panoramica progetto, web, API, script.
 - **ev-diagnostic-plan.md** — piano completo e step (Supabase, Vercel, script, firmware).
