@@ -16,7 +16,11 @@ async function getExpectedToken(password: string): Promise<string> {
     key,
     new TextEncoder().encode(AUTH_MESSAGE)
   );
-  return btoa(String.fromCharCode(...new Uint8Array(sig)))
+  const bytes = new Uint8Array(sig);
+  const binary = Array.from(bytes)
+    .map((b) => String.fromCharCode(b))
+    .join("");
+  return btoa(binary)
     .replace(/\+/g, "-")
     .replace(/\//g, "_")
     .replace(/=+$/, "");
