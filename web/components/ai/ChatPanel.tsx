@@ -13,15 +13,32 @@ const QUICK_ASKS = [
 export function ChatPanel() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<{ role: "user" | "ai"; text: string }[]>([]);
+  const [loading, setLoading] = useState(false);
 
-  const handleSend = () => {
-    if (!input.trim()) return;
-    setMessages((prev) => [...prev, { role: "user", text: input.trim() }]);
+  const handleSend = async () => {
+    const text = input.trim();
+    if (!text) return;
+    setMessages((prev) => [...prev, { role: "user", text }]);
     setInput("");
-    setMessages((prev) => [
-      ...prev,
-      { role: "ai", text: "Risposta simulata. Collega /api/analyze per risposte reali da Claude." },
-    ]);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ context: text }),
+      });
+      const data = (await res.json()) as { ok?: boolean; diagnosis?: string; error?: string };
+      const aiText = data.ok && data.diagnosis
+        ? data.diagnosis
+        : data.error
+          ? `Errore: ${data.error}`
+          : "Nessuna risposta dal servizio. Verifica che ANTHROPIC_API_KEY sia configurata.";
+      setMessages((prev) => [...prev, { role: "ai", text: aiText }]);
+    } catch {
+      setMessages((prev) => [...prev, { role: "ai", text: "Errore di connessione. Riprova." }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -31,9 +48,14 @@ export function ChatPanel() {
         <StatusBadge variant="green">Claude Sonnet 4</StatusBadge>
       </div>
       <div className="flex max-h-[340px] flex-col gap-2 overflow-y-auto pr-0.5">
-        {messages.length === 0 && (
+        {messages.length === 0 && !loading && (
           <p className="rounded-md bg-[var(--color-background-secondary)] px-3 py-2.5 text-xs text-[var(--color-text-secondary)]">
-            Chiedi qualcosa sul veicolo. Usa i pulsanti rapidi o scrivi nel campo sotto.
+            Chiedi qualcosa sul veicolo. Usa i pulsanti rapidi o scrivi nel campo sotto. Le risposte usano Claude (API analyze).
+          </p>
+        )}
+        {loading && (
+          <p className="rounded-md bg-[var(--color-background-secondary)] px-3 py-2.5 text-xs text-[var(--color-text-tertiary)]">
+            Analisi in corso…
           </p>
         )}
         {messages.map((m, i) => (
@@ -72,10 +94,11 @@ export function ChatPanel() {
         />
         <button
           type="button"
-          onClick={handleSend}
-          className="rounded-md border border-[var(--color-border-secondary)] bg-transparent px-3.5 py-2 text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-background-secondary)]"
+          onClick={() => void handleSend()}
+          disabled={loading}
+          className="rounded-md border border-[var(--color-border-secondary)] bg-transparent px-3.5 py-2 text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-background-secondary)] disabled:opacity-50"
         >
-          Invia
+          {loading ? "…" : "Invia"}
         </button>
       </div>
     </div>

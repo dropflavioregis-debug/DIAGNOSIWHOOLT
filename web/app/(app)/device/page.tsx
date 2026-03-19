@@ -1,12 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SectionCard } from "@/components/common/SectionCard";
-import { EmptyState } from "@/components/common/EmptyState";
 
 export default function DevicePage() {
-  const [ssid, setSsid] = useState("");
-  const [serverUrl, setServerUrl] = useState("");
+  const [origin, setOrigin] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") setOrigin(window.location.origin);
+  }, []);
+
+  const copyUrl = () => {
+    if (origin) {
+      void navigator.clipboard.writeText(origin);
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -15,54 +23,37 @@ export default function DevicePage() {
         <p className="text-xs text-[var(--color-text-secondary)]">ESP32-S3 — WiFi, CAN, OTA</p>
       </div>
 
-      <EmptyState
-        title="In attesa di connessione"
-        description="Nessun dispositivo connesso. Configura l'URL del server e le credenziali WiFi qui sotto, poi connetti l'ESP32."
-      />
+      <SectionCard title="Come configurare l’ESP32">
+        <p className="text-xs text-[var(--color-text-secondary)] mb-4">
+          La configurazione (WiFi, URL server, API key) si fa <strong className="text-[var(--color-text-primary)]">sul dispositivo</strong>, non da qui. Il dashboard non invia dati all’ESP32.
+        </p>
+        <ol className="list-decimal list-inside text-xs text-[var(--color-text-secondary)] space-y-2 mb-4">
+          <li>Alla prima accensione senza WiFi, l’ESP32 crea l’hotspot <strong className="text-[var(--color-text-primary)]">EV-Diagnostic-XXXX</strong> (XXXX = ultimi 4 caratteri del MAC).</li>
+          <li>Connetti telefono o PC a quel WiFi.</li>
+          <li>Apri il browser su <strong className="text-[var(--color-text-primary)]">http://192.168.4.1</strong>.</li>
+          <li>Nel form inserisci: SSID e password della tua rete, URL server (vedi sotto), API key (quella impostata in Vercel), nome dispositivo.</li>
+          <li>Clicca Salva → l’ESP32 si riavvia e si connette.</li>
+        </ol>
+        <p className="text-[11px] text-[var(--color-text-tertiary)]">
+          Per riconfigurare in seguito: quando l’ESP32 è connesso al WiFi, nella documentazione firmware è indicato come aprire la pagina di riconfigurazione (di solito un URL locale sul dispositivo).
+        </p>
+      </SectionCard>
 
-      <SectionCard title="Configurazione WiFi e server">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-primary)]">Nome rete WiFi (SSID)</label>
-            <input
-              type="text"
-              value={ssid}
-              onChange={(e) => setSsid(e.target.value)}
-              placeholder="SSID della rete"
-              className="w-full rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-primary)] px-2.5 py-2 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-[var(--color-text-primary)]">Password WiFi</label>
-            <input
-              type="password"
-              placeholder="••••••••••"
-              className="w-full rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-primary)] px-2.5 py-2 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
-            />
-          </div>
-        </div>
-        <div className="mt-4">
-          <label className="mb-1 block text-xs font-medium text-[var(--color-text-primary)]">URL server Vercel</label>
-          <input
-            type="url"
-            value={serverUrl}
-            onChange={(e) => setServerUrl(e.target.value)}
-            placeholder="https://tuo-progetto.vercel.app"
-            className="w-full rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-primary)] px-2.5 py-2 text-xs text-[var(--color-text-primary)] placeholder:text-[var(--color-text-tertiary)]"
-          />
-        </div>
-        <div className="mt-4 flex gap-2">
+      <SectionCard title="URL da usare sul dispositivo">
+        <p className="text-[11px] text-[var(--color-text-secondary)] mb-2">
+          Copia questo URL e incollalo nel form su 192.168.4.1 nel campo «URL server».
+        </p>
+        <div className="flex items-center gap-2">
+          <code className="flex-1 rounded-md bg-[var(--color-background-secondary)] px-2.5 py-2 text-xs text-[var(--color-text-primary)] truncate">
+            {origin || "…"}
+          </code>
           <button
             type="button"
-            className="rounded-md border border-[var(--color-border-secondary)] bg-transparent px-4 py-2 text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-background-secondary)]"
+            onClick={copyUrl}
+            disabled={!origin}
+            className="shrink-0 rounded-md border border-[var(--color-border-secondary)] bg-transparent px-3 py-2 text-xs font-medium text-[var(--color-text-primary)] transition-colors hover:bg-[var(--color-background-secondary)] disabled:opacity-50"
           >
-            Salva in NVS
-          </button>
-          <button
-            type="button"
-            className="rounded-md bg-[#1D9E75] px-4 py-2 text-xs font-medium text-white transition-opacity hover:opacity-90"
-          >
-            Invia a dispositivo
+            Copia
           </button>
         </div>
       </SectionCard>

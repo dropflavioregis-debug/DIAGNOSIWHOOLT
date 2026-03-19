@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { DTCItem, DTCFilter } from "@/lib/types";
 import { StatusBadge } from "@/components/common/StatusBadge";
 
@@ -16,11 +17,11 @@ interface DTCListWithFilterProps {
   onClear?: () => void;
 }
 
-const FILTERS: { key: DTCFilter; label: string; count: number }[] = [
-  { key: "all", label: "Tutti", count: 5 },
-  { key: "active", label: "Attivi", count: 2 },
-  { key: "pending", label: "In sospeso", count: 3 },
-  { key: "cleared", label: "Cancellati", count: 8 },
+const FILTER_KEYS: { key: DTCFilter; label: string }[] = [
+  { key: "all", label: "Tutti" },
+  { key: "active", label: "Attivi" },
+  { key: "pending", label: "In sospeso" },
+  { key: "cleared", label: "Cancellati" },
 ];
 
 function filterItems(items: DTCItem[], filter: DTCFilter): DTCItem[] {
@@ -28,13 +29,20 @@ function filterItems(items: DTCItem[], filter: DTCFilter): DTCItem[] {
   return items.filter((d) => d.type === filter);
 }
 
+function getCount(items: DTCItem[], filter: DTCFilter): number {
+  if (filter === "all") return items.length;
+  return items.filter((d) => d.type === filter).length;
+}
+
 export function DTCListWithFilter({ items, onScan, onClear }: DTCListWithFilterProps) {
+  const router = useRouter();
   const [filter, setFilter] = useState<DTCFilter>("all");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
 
   const filtered = filterItems(items, filter);
+  const filtersWithCount = FILTER_KEYS.map((f) => ({ ...f, count: getCount(items, f.key) }));
 
   const handleScan = () => {
     if (scanning) return;
@@ -112,7 +120,7 @@ export function DTCListWithFilter({ items, onScan, onClear }: DTCListWithFilterP
       )}
 
       <div className="flex" style={{ gap: "2px", marginBottom: "14px" }}>
-        {FILTERS.map((f) => (
+        {filtersWithCount.map((f) => (
           <button
             key={f.key}
             type="button"
@@ -196,6 +204,7 @@ export function DTCListWithFilter({ items, onScan, onClear }: DTCListWithFilterP
                   </div>
                   <button
                     type="button"
+                    onClick={() => router.push(`/ai?code=${encodeURIComponent(d.code)}`)}
                     className="mt-2 text-[11px] text-[var(--color-text-info)] hover:underline"
                   >
                     Analisi dettagliata AI ↗

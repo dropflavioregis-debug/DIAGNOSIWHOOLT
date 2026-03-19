@@ -89,6 +89,19 @@ Il firmware controlla periodicamente (ogni 24 h) l’endpoint `GET /api/firmware
 
 **Backend:** imposta le variabili d’ambiente `FIRMWARE_VERSION` (es. `1.0.1`) e `FIRMWARE_BINARY_URL` (URL pubblico del file `.bin`, es. da Vercel Blob o CDN). Dopo ogni build di firmware, carica il `.bin` generato da `pio run` e aggiorna `FIRMWARE_BINARY_URL` (e `FIRMWARE_VERSION`) in produzione.
 
+## Deploy su Vercel
+
+1. **Importa il repo** su [vercel.com](https://vercel.com) (Import Git Repository).
+2. **Root Directory:** imposta **Root Directory** su `web` (Project Settings → General).
+3. **Variabili d'ambiente:** in Project Settings → Environment Variables aggiungi quelle necessarie (vedi `.env.example`):
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (obbligatori per DB)
+   - `ANTHROPIC_API_KEY` (per analisi AI)
+   - `API_KEY` (stessa chiave usata dall’ESP32 per le richieste API)
+   - Opzionali: `SITE_PASSWORD`, `FIRMWARE_VERSION`, `FIRMWARE_BINARY_URL`
+4. **Deploy:** ogni push sul branch collegato (es. `main`) avvia il build. Il build usa `npm run build` nella cartella `web` e produce l’output in `.next`.
+
+Build verificato con `cd web && npm run build`.
+
 ## Dashboard e API reali (Fase 4)
 
 Con Supabase e (opzionale) Claude configurati:
@@ -97,24 +110,31 @@ Con Supabase e (opzionale) Claude configurati:
 - **Export report PDF**: da pagina **Sessioni** (`/sessions`), espandi una sessione e usa **Scarica report PDF**; l’endpoint `GET /api/sessions/[id]/export` restituisce un PDF con dati sessione, DTC, diagnosi AI e ultime letture.
 - **Ingest**: i payload POST a `/api/ingest` vengono salvati in `sessions` e `readings`.
 - **Vehicle detect**: lookup su tabella `vehicles` per `can_ids`.
-- **Libs**: `GET /api/libs/[vehicle_id]` restituisce `signals` e `dtc` da Supabase.
+- **Libs**: `GET /api/libs/[vehicle_id]` restituisce `signals` e `dtc` da Supabase. Dalla pagina **/libs** puoi importare librerie da URL o caricare file JSON: i file vengono salvati in **Supabase Storage** (bucket `libs`) e i dati in `vehicles`/`signals`/`dtc` per la diagnosi. Funziona anche su Vercel.
 - **Analyze**: `POST /api/analyze` con `raw_dtc`/`signals` chiama Claude e può aggiornare `ai_diagnosis` sulla sessione se viene passato `session_id`.
 
 ## Scripts (sincronizzazione librerie)
 
-Script in `scripts/` per clonare sorgenti GitHub, convertire CSV/DBC in JSON e importare in Supabase:
+Script in `scripts/` per clonare sorgenti GitHub, convertire CSV/DBC in JSON e **copiare tutto in Supabase** (Database + Storage), così l’app su Vercel ha tutto il necessario:
 
 ```bash
 cd scripts
 npm install
+# Variabili d'ambiente (come in web/.env o Vercel):
+export SUPABASE_URL="https://xxx.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="eyJ..."
+
+# Opzione A — tutto in un comando (sync + convert + import in DB + upload in Storage):
+npm run sync-to-vercel
+
+# Opzione B — step singoli:
 npx tsx sync-libs.ts              # clona repo in ../libs-sources/
-npx tsx convert-csv-to-json.ts    # CSV (JejuSoul) -> libs-sources/converted/
+npx tsx convert-csv-to-json.ts    # CSV -> libs-sources/converted/
 npx tsx convert-dbc-to-json.ts    # DBC -> libs-sources/converted/
-# Imposta SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY, poi:
-npx tsx import-to-supabase.ts     # importa converted/*.json in Supabase
+npx tsx import-to-supabase.ts     # copia in DB (vehicles, signals, dtc) + Storage (bucket libs)
 ```
 
-Vedi `libs-sources/README.md` per i dettagli.
+`import-to-supabase.ts` crea il bucket Storage `libs` se manca, carica ogni JSON in Storage e importa veicoli/segnali/DTC nel database. Dopo aver eseguito questi script, il deploy su Vercel usa solo Supabase (nessun file locale). Vedi `libs-sources/README.md` per i dettagli.
 
 ## Roadmap
 

@@ -10,6 +10,7 @@ import { DTCListCompact } from "@/components/dashboard/DTCListCompact";
 import { AIPanel } from "@/components/dashboard/AIPanel";
 import { CellGrid } from "@/components/battery/CellGrid";
 import { EmptyState } from "@/components/common/EmptyState";
+import { RefreshButton } from "@/components/dashboard/RefreshButton";
 
 type SessionRow = {
   id: string;
@@ -167,17 +168,7 @@ export default async function DashboardPage() {
           {dtcItems.length > 0 && (
             <StatusBadge variant="amber">{dtcItems.length} DTC attivi</StatusBadge>
           )}
-          <button
-            type="button"
-            className="rounded-[var(--border-radius-md)] border border-[var(--color-border-secondary)] bg-transparent transition-colors hover:bg-[var(--color-background-secondary)]"
-            style={{
-              padding: "5px 14px",
-              fontSize: "11px",
-              color: "var(--color-text-secondary)",
-            }}
-          >
-            Aggiorna
-          </button>
+          <RefreshButton />
         </div>
       </div>
 
@@ -208,7 +199,9 @@ export default async function DashboardPage() {
               action={
                 <button
                   type="button"
-                  className="text-[11px] cursor-pointer hover:underline"
+                  disabled
+                  title="Cancellazione DTC dal veicolo non disponibile da dashboard"
+                  className="text-[11px] cursor-not-allowed opacity-60"
                   style={{ color: "var(--color-text-info)" }}
                 >
                   Cancella tutti
@@ -248,7 +241,7 @@ export default async function DashboardPage() {
               action={<StatusBadge variant="green">Claude</StatusBadge>}
             >
               {aiMessages.length > 0 ? (
-                <AIPanel messages={aiMessages} />
+                <AIPanel messages={aiMessages} sessionId={session?.id ?? null} />
               ) : (
                 <EmptyState
                   title="Nessuna analisi AI"

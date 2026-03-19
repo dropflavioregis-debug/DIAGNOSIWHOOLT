@@ -1,10 +1,16 @@
+import Link from "next/link";
 import type { AIMessage } from "@/lib/types";
 
 interface AIPanelProps {
   messages: AIMessage[];
+  sessionId?: string | null;
 }
 
-export function AIPanel({ messages }: AIPanelProps) {
+const btnClass =
+  "flex-1 rounded-[var(--border-radius-md)] border border-[var(--color-border-secondary)] bg-transparent text-center transition-colors hover:bg-[var(--color-background-secondary)]";
+const btnStyle = { padding: "8px", fontSize: "11px", color: "var(--color-text-secondary)" as const };
+
+export function AIPanel({ messages, sessionId }: AIPanelProps) {
   return (
     <div className="flex flex-col" style={{ gap: "10px" }}>
       <div className="flex flex-col" style={{ gap: "10px" }}>
@@ -27,20 +33,27 @@ export function AIPanel({ messages }: AIPanelProps) {
         ))}
       </div>
       <div className="flex" style={{ gap: "8px" }}>
-        <button
-          type="button"
-          className="flex-1 rounded-[var(--border-radius-md)] border border-[var(--color-border-secondary)] bg-transparent text-center transition-colors hover:bg-[var(--color-background-secondary)]"
-          style={{ padding: "8px", fontSize: "11px", color: "var(--color-text-secondary)" }}
-        >
+        <Link href="/ai" className={btnClass} style={btnStyle}>
           Approfondisci
-        </button>
-        <button
-          type="button"
-          className="flex-1 rounded-[var(--border-radius-md)] border border-[var(--color-border-secondary)] bg-transparent text-center transition-colors hover:bg-[var(--color-background-secondary)]"
-          style={{ padding: "8px", fontSize: "11px", color: "var(--color-text-secondary)" }}
-        >
-          Scarica report
-        </button>
+        </Link>
+        {sessionId ? (
+          <a
+            href={`/api/sessions/${sessionId}/export`}
+            download
+            className={btnClass}
+            style={btnStyle}
+          >
+            Scarica report
+          </a>
+        ) : (
+          <span
+            className={btnClass}
+            style={{ ...btnStyle, opacity: 0.6, cursor: "not-allowed" }}
+            title="Nessuna sessione disponibile"
+          >
+            Scarica report
+          </span>
+        )}
       </div>
     </div>
   );

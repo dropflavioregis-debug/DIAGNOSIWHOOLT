@@ -12,3 +12,7 @@ scripts/dist/
 .env
 .env.local
 *.local
+
+# Editor / build cache
+.cursor/
+*.tsbuildinfo

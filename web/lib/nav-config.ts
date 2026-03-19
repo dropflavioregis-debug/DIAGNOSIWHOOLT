@@ -15,6 +15,7 @@ export const NAV_SECTIONS = [
       { href: "/libs", label: "Librerie", icon: "libs" },
       { href: "/device", label: "Dispositivo", icon: "device" },
       { href: "/config", label: "Config", icon: "config" },
+      { href: "/test", label: "Test connessioni", icon: "test" },
     ],
   },
 ] as const;

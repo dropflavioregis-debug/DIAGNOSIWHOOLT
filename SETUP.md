@@ -95,7 +95,23 @@ Così puoi cambiare impostazioni quando vuoi senza ricollegare il cavo USB.
 
 ---
 
-## 6. Protezione con password (sito su Vercel)
+## 6. Copiare le librerie in Supabase (per Vercel)
+
+Per far funzionare tutto su Vercel (diagnosi, pagina Librerie, API libs), database e Storage Supabase devono contenere le librerie. Esegui **una volta** (o quando aggiorni le sorgenti):
+
+```bash
+cd scripts
+npm install
+export SUPABASE_URL="https://tuo-progetto.supabase.co"
+export SUPABASE_SERVICE_ROLE_KEY="la-tua-service-role-key"
+npm run sync-to-vercel
+```
+
+Questo: clona i repo in `libs-sources/`, converte CSV/DBC in JSON, importa i dati in **Database** (vehicles, signals, dtc) e carica i file in **Storage** (bucket `libs`). Dopo il deploy, Vercel userà solo Supabase.
+
+---
+
+## 7. Protezione con password (sito su Vercel)
 
 Se l’app è pubblica su Vercel e vuoi limitare l’accesso alla sola web UI:
 
@@ -110,7 +126,7 @@ Se `SITE_PASSWORD` non è impostata, il sito resta accessibile senza login.
 
 ---
 
-## 7. Riferimenti
+## 8. Riferimenti
 
 - **README.md** — panoramica progetto, web, API, script.
 - **ev-diagnostic-plan.md** — piano completo e step (Supabase, Vercel, script, firmware).

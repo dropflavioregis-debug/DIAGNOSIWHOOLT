@@ -6,7 +6,7 @@ This directory is populated by the scripts in `scripts/`:
 
 2. **convert-csv-to-json.ts** / **convert-dbc-to-json.ts** — Read CSV or DBC files from these clones and write internal JSON into `converted/`.
 
-3. **import-to-supabase.ts** — Imports `converted/*.json` into Supabase tables `vehicles`, `signals`, `dtc`.
+3. **import-to-supabase.ts** — Imports `converted/*.json` into Supabase: tables `vehicles`, `signals`, `dtc` and **Storage** bucket `libs` (one JSON file per library). Così tutto funziona su Vercel.
 
 This folder is typically gitignored because it contains large cloned repos. To refresh:
 

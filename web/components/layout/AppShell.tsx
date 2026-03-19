@@ -47,11 +47,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             style={{ color: "var(--color-text-secondary)" }}
           >
             <span
-              className="pulse"
-              style={{ flexShrink: 0, width: "7px", height: "7px", display: "inline-block" }}
+              className="h-[7px] w-[7px] shrink-0 rounded-full"
+              style={{ background: "var(--color-text-tertiary)" }}
               aria-hidden
             />
-            ESP32-S3 connesso
+            Nessun dispositivo
           </div>
           <form action="/api/auth/logout" method="POST" className="mt-2">
             <button

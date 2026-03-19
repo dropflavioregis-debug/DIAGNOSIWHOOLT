@@ -1,7 +1,8 @@
 #!/usr/bin/env npx tsx
 /**
- * Import converted JSON libs (libs-sources/converted/*.json) into Supabase vehicles, signals, dtc.
- * Requires env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_ANON_KEY).
+ * Copia librerie da libs-sources/converted in Supabase: Database (vehicles, signals, dtc) + Storage (bucket libs).
+ * Così tutto funziona su Vercel senza dipendenze locali.
+ * Requires env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY (o NEXT_PUBLIC_*).
  * Usage: npx tsx import-to-supabase.ts [path-to-converted-dir]
  */
 
@@ -15,6 +16,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const DEFAULT_CONVERTED = path.join(ROOT, "libs-sources", "converted");
 
+const LIBS_BUCKET = "libs";
+
 const SUPABASE_URL = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY =
   process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -24,6 +27,43 @@ function getSupabase(): SupabaseClient {
     throw new Error("Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or NEXT_PUBLIC_*) in env");
   }
   return createClient(SUPABASE_URL, SUPABASE_KEY);
+}
+
+function slugForLib(make: string, model: string): string {
+  const slug = `${make}_${model}`
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_-]/g, "")
+    .slice(0, 120);
+  return slug || "lib";
+}
+
+async function ensureLibsBucket(supabase: SupabaseClient): Promise<void> {
+  const { error } = await supabase.storage.createBucket(LIBS_BUCKET, {
+    public: false,
+    fileSizeLimit: 10 * 1024 * 1024,
+  });
+  const msg = error?.message ?? "";
+  if (error && !/already exists|duplicate|Bucket.*exist/i.test(msg)) {
+    throw error;
+  }
+}
+
+async function uploadLibToStorage(
+  supabase: SupabaseClient,
+  make: string,
+  model: string,
+  jsonString: string
+): Promise<string> {
+  await ensureLibsBucket(supabase);
+  const slug = slugForLib(make, model);
+  const filePath = `${slug}.json`;
+  const { error } = await supabase.storage.from(LIBS_BUCKET).upload(filePath, jsonString, {
+    contentType: "application/json",
+    upsert: true,
+  });
+  if (error) throw error;
+  return filePath;
 }
 
 async function ensureVehicle(
@@ -37,9 +77,13 @@ async function ensureVehicle(
     .eq("make", lib.make)
     .eq("model", lib.model)
     .limit(1)
-    .single();
+    .maybeSingle();
 
-  if (existing?.id) return existing.id;
+  if (existing?.id) {
+    await supabase.from("signals").delete().eq("vehicle_id", existing.id);
+    await supabase.from("dtc").delete().eq("vehicle_id", existing.id);
+    return existing.id;
+  }
 
   const { data: inserted, error } = await supabase
     .from("vehicles")
@@ -125,6 +169,7 @@ async function main() {
   let signalsDone = 0;
   let dtcDone = 0;
 
+  let storageDone = 0;
   for (const file of files) {
     const filePath = path.join(convertedDir, file);
     const raw = fs.readFileSync(filePath, "utf-8");
@@ -146,10 +191,16 @@ async function main() {
     const d = await insertDtc(supabase, vehicleId, lib.dtc ?? []);
     signalsDone += s;
     dtcDone += d;
-    console.log(file, "-> vehicle", vehicleId.slice(0, 8), "+", s, "signals,", d, "dtc");
+    try {
+      await uploadLibToStorage(supabase, lib.make, lib.model, raw);
+      storageDone++;
+    } catch (err) {
+      console.warn("Storage upload failed for", file, err);
+    }
+    console.log(file, "-> DB + Storage |", s, "signals,", d, "dtc");
   }
 
-  console.log("Done. Vehicles:", vehiclesDone, "Signals:", signalsDone, "DTC:", dtcDone);
+  console.log("Done. Vehicles:", vehiclesDone, "Signals:", signalsDone, "DTC:", dtcDone, "| Storage files:", storageDone);
 }
 
 main().catch((e) => {

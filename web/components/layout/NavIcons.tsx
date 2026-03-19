@@ -57,6 +57,12 @@ const iconPaths: Record<NavIcon, React.ReactNode> = {
       <path d="M8 1v2M8 13v2M1 8h2M13 8h2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
     </>
   ),
+  test: (
+    <>
+      <path d="M3 8l3 3 7-7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.2" fill="none" />
+    </>
+  ),
 };
 
 export function NavIcon({ name }: { name: NavIcon }) {

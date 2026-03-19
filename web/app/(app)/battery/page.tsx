@@ -105,7 +105,9 @@ export default async function BatteryPage() {
               action={
                 <button
                   type="button"
-                  className="rounded-md border border-[var(--color-border-secondary)] bg-transparent px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-background-secondary)]"
+                  disabled
+                  title="Export disponibile quando ci saranno dati storici"
+                  className="rounded-md border border-[var(--color-border-secondary)] bg-transparent px-2.5 py-1 text-[11px] text-[var(--color-text-secondary)] cursor-not-allowed opacity-60"
                 >
                   Esporta ↗
                 </button>

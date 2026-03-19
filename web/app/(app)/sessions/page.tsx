@@ -93,13 +93,14 @@ export default function SessionsPage() {
       <SectionCard
         title="Sessioni"
         action={
-          <button
-            type="button"
+          <a
+            href="/api/sessions/export"
+            download="sessions-export.csv"
             className="rounded-[var(--border-radius-md)] bg-transparent px-2.5 py-1 text-[11px] transition-colors hover:bg-[var(--color-background-secondary)]"
-            style={{ border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)" }}
+            style={{ border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-secondary)", textDecoration: "none" }}
           >
             Esporta CSV ↗
-          </button>
+          </a>
         }
       >
         <input

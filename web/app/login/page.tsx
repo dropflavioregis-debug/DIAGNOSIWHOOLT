@@ -1,9 +1,9 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const from = searchParams.get("from") || "/";
@@ -68,5 +68,17 @@ export default function LoginPage() {
         </button>
       </form>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-[var(--color-background-primary)] p-6">
+        <p className="text-sm text-[var(--color-text-secondary)]">Caricamento…</p>
+      </main>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

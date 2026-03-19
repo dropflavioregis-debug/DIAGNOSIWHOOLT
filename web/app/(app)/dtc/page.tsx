@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/common/StatusBadge";
 import { DTCListWithFilter } from "@/components/dtc/DTCListWithFilter";
 import { ECUList } from "@/components/dtc/ECUList";
 import { AIPanel } from "@/components/dashboard/AIPanel";
+import { LinkToAIButton } from "@/components/dashboard/LinkToAIButton";
 import { EmptyState } from "@/components/common/EmptyState";
 
 type DtcRow = {
@@ -144,19 +145,19 @@ export default async function DTCPage() {
           </SectionCard>
           <SectionCard title="Analisi AI" action={<StatusBadge variant="green">Claude</StatusBadge>}>
             {aiMessages.length > 0 ? (
-              <AIPanel messages={aiMessages} />
+              <AIPanel messages={aiMessages} sessionId={lastSessionId} />
             ) : (
               <EmptyState
                 title="Nessuna analisi AI"
                 description="Esegui un'analisi con Claude per vedere la diagnosi."
               />
             )}
-            <button
-              type="button"
+            <LinkToAIButton
+              query={{ from: "dtc" }}
               className="mt-2 w-full rounded-md border border-[var(--color-border-secondary)] py-2 text-[11px] text-[var(--color-text-secondary)] transition-colors hover:bg-[var(--color-background-secondary)]"
             >
               Analisi completa con Claude ↗
-            </button>
+            </LinkToAIButton>
           </SectionCard>
         </div>
       </div>
