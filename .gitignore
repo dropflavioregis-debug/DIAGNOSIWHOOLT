@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Libs: cloned repos and converted output (keep libs-sources/README.md)
+libs-sources/*
+!libs-sources/README.md
+
+# Scripts build
+scripts/dist/
+
+# Env
+.env
+.env.local
+*.local

@@ -1,0 +1,443 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{font-family:var(--font-sans);display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.row{display:grid;gap:12px}
+.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.r2{grid-template-columns:repeat(2,minmax(0,1fr))}
+.r3{grid-template-columns:1fr 1fr 200px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px}
+.mlabel{font-size:11px;color:var(--color-text-secondary);margin-bottom:5px}
+.mval{font-size:24px;font-weight:500;color:var(--color-text-primary);line-height:1}
+.msub{font-size:11px;color:var(--color-text-tertiary);margin-top:3px}
+.bar-wrap{height:4px;background:var(--color-border-tertiary);border-radius:2px;margin-top:8px;overflow:hidden}
+.bar{height:100%;border-radius:2px;transition:width .4s}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ctitle{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.cact{font-size:11px;color:var(--color-text-info);cursor:pointer}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.bg{background:#EAF3DE;color:#3B6D11}
+.ba{background:#FAEEDA;color:#854F0B}
+.br{background:#FCEBEB;color:#A32D2D}
+.bb{background:#E6F1FB;color:#185FA5}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.cell-grid{display:grid;grid-template-columns:repeat(12,1fr);gap:2px}
+.cell{height:22px;border-radius:2px;cursor:pointer;transition:opacity .12s;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:500}
+.cell:hover{opacity:.7}
+.seg-row{display:flex;flex-direction:column;gap:4px}
+.seg{display:flex;align-items:center;gap:8px;padding:7px 10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);cursor:pointer;transition:background .12s}
+.seg:hover{background:var(--color-background-secondary)}
+.seg-id{font-size:10px;font-family:var(--font-mono);color:var(--color-text-tertiary);min-width:52px}
+.seg-name{font-size:12px;color:var(--color-text-primary);flex:1}
+.seg-val{font-size:12px;font-weight:500;color:var(--color-text-primary);min-width:48px;text-align:right}
+.seg-bar-wrap{width:60px;height:3px;background:var(--color-border-tertiary);border-radius:2px;overflow:hidden;flex-shrink:0}
+.seg-bar{height:100%;border-radius:2px}
+.sparkline{width:100%;overflow:hidden}
+canvas{width:100%;display:block}
+.tab-row{display:flex;gap:2px;margin-bottom:12px}
+.tab{padding:5px 11px;font-size:12px;border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-secondary);transition:all .12s;border:none;background:transparent}
+.tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
+.code-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary);line-height:1.7;overflow-x:auto;white-space:pre}
+.kw{color:#185FA5}
+.cm{color:var(--color-text-tertiary)}
+.st{color:#3B6D11}
+.num{color:#854F0B}
+.flow-step{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.flow-step:last-child{border-bottom:none}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--color-background-info);color:var(--color-text-info);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-body{flex:1}
+.step-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.step-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.5}
+.step-tag{font-family:var(--font-mono);font-size:10px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px;color:var(--color-text-secondary)}
+.section-tab-content{display:none}
+.section-tab-content.active{display:block}
+.tooltip{position:absolute;background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);padding:6px 10px;font-size:11px;color:var(--color-text-primary);pointer-events:none;white-space:nowrap;z-index:10}
+.chart-wrap{position:relative}
+</style>
+
+<div class="wrap">
+
+  <div class="row r4">
+    <div class="metric">
+      <div class="mlabel">SOC attuale</div>
+      <div class="mval">78<span style="font-size:14px;color:var(--color-text-secondary)">%</span></div>
+      <div class="bar-wrap"><div class="bar" style="width:78%;background:#1D9E75"></div></div>
+      <div class="msub">47.3 / 52 kWh</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">SOH batteria</div>
+      <div class="mval" id="soh-val">91<span style="font-size:14px;color:var(--color-text-secondary)">%</span></div>
+      <div class="bar-wrap"><div class="bar" id="soh-bar" style="width:91%;background:#378ADD"></div></div>
+      <div class="msub" id="soh-sub">Ottimo — 47.3 kWh eff.</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Temp. massima cella</div>
+      <div class="mval">27<span style="font-size:14px;color:var(--color-text-secondary)">°C</span></div>
+      <div class="bar-wrap"><div class="bar" style="width:40%;background:#EF9F27"></div></div>
+      <div class="msub">Cella #47 — delta +3°C</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Tensione pack</div>
+      <div class="mval">356<span style="font-size:14px;color:var(--color-text-secondary)">V</span></div>
+      <div class="bar-wrap"><div class="bar" style="width:71%;background:#7F77DD"></div></div>
+      <div class="msub">3.71V media per cella</div>
+    </div>
+  </div>
+
+  <div class="row r2">
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">Mappa termica celle (96 celle · 8 moduli)</span>
+        <span class="badge ba"><span class="bdot"></span>1 anomalia</span>
+      </div>
+      <div class="cell-grid" id="cellmap"></div>
+      <div style="display:flex;gap:10px;margin-top:8px;align-items:center">
+        <span style="font-size:10px;color:var(--color-text-tertiary)">Fredda</span>
+        <div style="flex:1;height:3px;border-radius:2px;background:linear-gradient(to right,#B5D4F4,#5DCAA5,#1D9E75,#EF9F27,#E24B4A)"></div>
+        <span style="font-size:10px;color:var(--color-text-tertiary)">Calda</span>
+      </div>
+      <div id="cell-tooltip" style="display:none;margin-top:8px;padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:12px;color:var(--color-text-secondary)"></div>
+    </div>
+
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">SOH storico (ultimi 24 mesi)</span>
+        <button onclick="sendPrompt('Come salvare e leggere lo storico SOH su Supabase con ESP32?')" style="font-size:11px;padding:4px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Esporta ↗</button>
+      </div>
+      <div class="chart-wrap" style="height:120px">
+        <canvas id="soh-chart" height="120"></canvas>
+      </div>
+      <div style="display:flex;gap:12px;margin-top:8px">
+        <div style="flex:1;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);text-align:center">
+          <div style="font-size:10px;color:var(--color-text-tertiary)">Degradazione/anno</div>
+          <div style="font-size:14px;font-weight:500;color:var(--color-text-primary)">−2.1%</div>
+        </div>
+        <div style="flex:1;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);text-align:center">
+          <div style="font-size:10px;color:var(--color-text-tertiary)">Cicli stimati</div>
+          <div style="font-size:14px;font-weight:500;color:var(--color-text-primary)">847</div>
+        </div>
+        <div style="flex:1;padding:8px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);text-align:center">
+          <div style="font-size:10px;color:var(--color-text-tertiary)">80% target</div>
+          <div style="font-size:14px;font-weight:500;color:var(--color-text-primary)">~5 anni</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <span class="ctitle">Parametri per modulo</span>
+      <div style="display:flex;gap:6px">
+        <span class="badge bb">8 moduli · 12 celle ciascuno</span>
+        <button onclick="sendPrompt('Come leggere i dati per singolo modulo batteria con UDS ReadDataByIdentifier su Renault Zoe?')" style="font-size:11px;padding:4px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">DID dettaglio ↗</button>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px" id="module-grid"></div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ctitle">Implementazione</span></div>
+    <div class="tab-row">
+      <button class="tab on" onclick="switchTab(this,'esp')">ESP32 firmware</button>
+      <button class="tab" onclick="switchTab(this,'api')">API Vercel</button>
+      <button class="tab" onclick="switchTab(this,'db')">Supabase schema</button>
+      <button class="tab" onclick="switchTab(this,'flow')">Flusso dati</button>
+    </div>
+
+    <div id="tab-esp" class="section-tab-content active">
+      <div class="code-block"><span class="cm">// firmware/src/vehicle/battery_reader.cpp</span>
+<span class="cm">// Legge SOC, SOH, temp celle via UDS SID 0x22</span>
+
+<span class="kw">#include</span> <span class="st">"battery_reader.h"</span>
+<span class="kw">#include</span> <span class="st">"../uds/uds_client.h"</span>
+
+<span class="cm">// DID specifici Renault Zoe ZE50 (da OBDb JSON)</span>
+<span class="kw">#define</span> DID_SOC          <span class="num">0x2002</span>
+<span class="kw">#define</span> DID_SOH          <span class="num">0x2006</span>
+<span class="kw">#define</span> DID_CELL_TEMPS   <span class="num">0x4003</span>
+<span class="kw">#define</span> DID_PACK_VOLTAGE <span class="num">0x2001</span>
+<span class="kw">#define</span> ECU_BMS          <span class="num">0x7EC</span>
+
+BatteryData BatteryReader::read() {
+  BatteryData data = {};
+
+  <span class="cm">// 1. Apri sessione diagnostica extended</span>
+  uds.sessionControl(<span class="num">0x03</span>);
+  delay(<span class="num">50</span>);
+
+  <span class="cm">// 2. Leggi SOC</span>
+  uint8_t buf[<span class="num">8</span>];
+  <span class="kw">if</span> (uds.readDID(ECU_BMS, DID_SOC, buf)) {
+    data.soc = buf[<span class="num">1</span>] * <span class="num">0.5f</span>; <span class="cm">// formula da libreria JSON</span>
+  }
+
+  <span class="cm">// 3. Leggi SOH</span>
+  <span class="kw">if</span> (uds.readDID(ECU_BMS, DID_SOH, buf)) {
+    data.soh = buf[<span class="num">1</span>] * <span class="num">0.5f</span>;
+  }
+
+  <span class="cm">// 4. Leggi temperatura 96 celle (multi-frame ISO-TP)</span>
+  uint8_t tempBuf[<span class="num">128</span>];
+  <span class="kw">if</span> (uds.readDIDLong(ECU_BMS, DID_CELL_TEMPS, tempBuf)) {
+    <span class="kw">for</span> (int i = <span class="num">0</span>; i < <span class="num">96</span>; i++) {
+      data.cell_temps[i] = tempBuf[i] - <span class="num">40</span>; <span class="cm">// offset standard</span>
+    }
+  }
+
+  <span class="cm">// 5. Invia a Vercel via WiFi</span>
+  api.postBattery(data);
+
+  <span class="kw">return</span> data;
+}</div>
+      <button onclick="sendPrompt('Scrivi il codice completo battery_reader.cpp e uds_client.cpp per ESP32-S3 con TWAI nativo')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Genera codice completo ↗</button>
+    </div>
+
+    <div id="tab-api" class="section-tab-content">
+      <div class="code-block"><span class="cm">// web/app/api/battery/route.ts</span>
+<span class="kw">import</span> { createClient } <span class="kw">from</span> <span class="st">'@supabase/supabase-js'</span>
+<span class="kw">import</span> { NextRequest, NextResponse } <span class="kw">from</span> <span class="st">'next/server'</span>
+
+<span class="kw">export async function</span> POST(req: NextRequest) {
+  <span class="kw">const</span> supabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_KEY!
+  )
+
+  <span class="kw">const</span> body = await req.json()
+  <span class="cm">// body: { device_id, session_id, soc, soh, pack_voltage,</span>
+  <span class="cm">//         cell_temps: number[96], recorded_at }</span>
+
+  <span class="cm">// Salva lettura principale</span>
+  <span class="kw">const</span> { data, error } = await supabase
+    .from(<span class="st">'battery_readings'</span>)
+    .insert({
+      session_id:   body.session_id,
+      soc:          body.soc,
+      soh:          body.soh,
+      pack_voltage: body.pack_voltage,
+      cell_temps:   body.cell_temps,   <span class="cm">// JSONB array</span>
+      recorded_at:  body.recorded_at ?? <span class="kw">new</span> Date().toISOString()
+    })
+
+  <span class="kw">if</span> (error) <span class="kw">return</span> NextResponse.json({ error }, { status: <span class="num">500</span> })
+
+  <span class="kw">return</span> NextResponse.json({ ok: <span class="kw">true</span>, id: data?.[<span class="num">0</span>]?.id })
+}
+
+<span class="kw">export async function</span> GET(req: NextRequest) {
+  <span class="kw">const</span> sessionId = req.nextUrl.searchParams.get(<span class="st">'session_id'</span>)
+  <span class="kw">const</span> { data } = await supabase
+    .from(<span class="st">'battery_readings'</span>)
+    .select(<span class="st">'*'</span>)
+    .eq(<span class="st">'session_id'</span>, sessionId)
+    .order(<span class="st">'recorded_at'</span>, { ascending: <span class="kw">false</span> })
+    .limit(<span class="num">100</span>)
+
+  <span class="kw">return</span> NextResponse.json(data)
+}</div>
+      <button onclick="sendPrompt('Come configurare Supabase Realtime per aggiornare la dashboard batteria in tempo reale su Next.js?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Realtime con Supabase ↗</button>
+    </div>
+
+    <div id="tab-db" class="section-tab-content">
+      <div class="code-block"><span class="cm">-- supabase/migrations/006_battery_readings.sql</span>
+
+<span class="kw">CREATE TABLE</span> battery_readings (
+  id            UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  session_id    UUID <span class="kw">REFERENCES</span> sessions(id) <span class="kw">ON DELETE CASCADE</span>,
+
+  <span class="cm">-- Parametri principali</span>
+  soc           FLOAT <span class="kw">NOT NULL</span>,   <span class="cm">-- % 0-100</span>
+  soh           FLOAT,              <span class="cm">-- % 0-100</span>
+  pack_voltage  FLOAT,              <span class="cm">-- Volt</span>
+  pack_current  FLOAT,              <span class="cm">-- Ampere</span>
+
+  <span class="cm">-- Celle (JSONB array di 96 float)</span>
+  cell_temps    JSONB,              <span class="cm">-- [22.1, 23.5, ...]</span>
+  cell_voltages JSONB,              <span class="cm">-- [3.71, 3.72, ...]</span>
+
+  <span class="cm">-- Aggregati pre-calcolati (per query veloci)</span>
+  temp_min      FLOAT,
+  temp_max      FLOAT,
+  temp_avg      FLOAT,
+  volt_min      FLOAT,
+  volt_max      FLOAT,
+  volt_delta    FLOAT,              <span class="cm">-- max - min celle</span>
+
+  recorded_at   TIMESTAMPTZ <span class="kw">DEFAULT NOW</span>()
+);
+
+<span class="cm">-- Indice time-series per grafici storici</span>
+<span class="kw">CREATE INDEX</span> idx_batt_session_time
+  <span class="kw">ON</span> battery_readings(session_id, recorded_at <span class="kw">DESC</span>);
+
+<span class="cm">-- Abilita Realtime per dashboard live</span>
+<span class="kw">ALTER TABLE</span> battery_readings <span class="kw">REPLICA IDENTITY FULL</span>;
+<span class="kw">SELECT</span> supabase_realtime.enable_realtime(<span class="st">'battery_readings'</span>);</div>
+      <button onclick="sendPrompt('Come scrivere una query Supabase per il grafico SOH degli ultimi 12 mesi raggruppato per settimana?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Query storico ↗</button>
+    </div>
+
+    <div id="tab-flow" class="section-tab-content">
+      <div class="seg-row">
+        <div class="flow-step">
+          <div class="step-num">1</div>
+          <div class="step-body">
+            <div class="step-title">ESP32 legge batteria ogni secondo <span class="step-tag">TWAI + UDS</span></div>
+            <div class="step-desc">SID 0x22 → DID 0x2002 (SOC) + 0x2006 (SOH) + 0x4003 (96 temp). ISO-TP gestisce multi-frame. Dati raw → struttura BatteryData.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">2</div>
+          <div class="step-body">
+            <div class="step-title">POST a Vercel <span class="step-tag">WiFi · HTTPS</span></div>
+            <div class="step-desc">JSON compresso (gzip) con API key header. Vercel autentica, valida schema Zod, calcola aggregati (min/max/delta).</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">3</div>
+          <div class="step-body">
+            <div class="step-title">Insert in Supabase <span class="step-tag">PostgreSQL</span></div>
+            <div class="step-desc">Row inserita in battery_readings. Supabase Realtime notifica tutti i client connessi via WebSocket entro ~50ms.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">4</div>
+          <div class="step-body">
+            <div class="step-title">Dashboard aggiornata live <span class="step-tag">Next.js · useEffect</span></div>
+            <div class="step-desc">Il hook useRealtimeBattery() riceve il nuovo row → aggiorna stato React → mappa celle e grafici ri-renderizzati senza refresh.</div>
+          </div>
+        </div>
+        <div class="flow-step">
+          <div class="step-num">5</div>
+          <div class="step-body">
+            <div class="step-title">Anomalia rilevata → Claude API <span class="step-tag">Trigger automatico</span></div>
+            <div class="step-desc">Se temp_delta > 2°C o soh_delta < −0.5% → POST a /api/analyze con i dati → Claude risponde con diagnosi in italiano.</div>
+          </div>
+        </div>
+      </div>
+      <button onclick="sendPrompt('Scrivi il hook React useRealtimeBattery con Supabase Realtime per aggiornare la mappa celle in tempo reale')" style="margin-top:12px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Scrivi il hook React ↗</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const COLORS = {
+  cold:  ['#B5D4F4','#0C447C'],
+  cool:  ['#85B7EB','#0C447C'],
+  ok:    ['#5DCAA5','#085041'],
+  warm:  ['#1D9E75','#04342C'],
+  hot:   ['#EF9F27','#633806'],
+  alert: ['#E24B4A','#791F1F']
+};
+
+function cellColor(t) {
+  if (t < 20) return COLORS.cold;
+  if (t < 22) return COLORS.cool;
+  if (t < 25) return COLORS.ok;
+  if (t < 26) return COLORS.warm;
+  if (t < 27) return COLORS.hot;
+  return COLORS.alert;
+}
+
+function buildCellMap() {
+  const grid = document.getElementById('cellmap');
+  const tip  = document.getElementById('cell-tooltip');
+  const temps = Array.from({length:96}, (_,i) => {
+    let b = 23.5 + (Math.random()-0.5)*2;
+    if (i===46) b = 27.2;
+    if (i===47) b = 26.4;
+    if (i<12)   b = 21.5 + Math.random();
+    return +b.toFixed(1);
+  });
+  grid.innerHTML = temps.map((t,i)=>{
+    const [bg,fg] = cellColor(t);
+    const mod = Math.floor(i/12)+1;
+    return `<div class="cell" style="background:${bg};color:${fg}" 
+      onmouseenter="showTip(${i},${t},${mod})" 
+      onmouseleave="hideTip()"
+      onclick="sendPrompt('Cella ${i+1} del modulo ${mod} mostra ${t}°C — è normale per una Renault Zoe?')">${t}</div>`;
+  }).join('');
+}
+
+function showTip(i,t,mod) {
+  const tip = document.getElementById('cell-tooltip');
+  tip.style.display='block';
+  const warn = t>26 ? ' — ANOMALIA' : '';
+  tip.textContent = `Cella #${i+1} · Modulo ${mod} · ${t}°C${warn}`;
+  tip.style.color = t>26 ? '#A32D2D' : 'var(--color-text-secondary)';
+}
+function hideTip() {
+  document.getElementById('cell-tooltip').style.display='none';
+}
+
+function buildModules() {
+  const g = document.getElementById('module-grid');
+  const mods = Array.from({length:8}, (_,i) => ({
+    id: i+1,
+    volt: +(3.68 + Math.random()*0.06).toFixed(2),
+    temp: +(22 + Math.random()*4 + (i===3?2:0)).toFixed(1),
+    bal: i!==3
+  }));
+  g.innerHTML = mods.map(m=>{
+    const tempOk = m.temp < 26;
+    const [tbg,tfg] = tempOk ? ['#EAF3DE','#3B6D11'] : ['#FAEEDA','#854F0B'];
+    return `<div style="padding:10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);cursor:pointer" 
+      onclick="sendPrompt('Come leggere i parametri del modulo ${m.id} con UDS su ESP32?')"
+      onmouseenter="this.style.background='var(--color-background-secondary)'"
+      onmouseleave="this.style.background=''">
+      <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px">Modulo ${m.id}</div>
+      <div style="font-size:16px;font-weight:500;color:var(--color-text-primary);margin-bottom:4px">${m.volt}V</div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${tbg};color:${tfg}">${m.temp}°C</span>
+        <span style="font-size:10px;padding:2px 6px;border-radius:10px;background:${m.bal?'#EAF3DE':'#FAEEDA'};color:${m.bal?'#3B6D11':'#854F0B'}">${m.bal?'bilanciato':'sbilanciato'}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function buildSOHChart() {
+  const ctx = document.getElementById('soh-chart');
+  if (!ctx) return;
+  const labels = ['Mar 23','Giu','Set','Dic','Mar 24','Giu','Set','Dic','Mar 25','Giu','Set','Dic','Mar 26'];
+  const vals   = [97.2,96.8,96.1,95.5,94.9,94.2,93.6,93.0,92.3,91.8,91.4,91.1,91.0];
+  new Chart(ctx, {
+    type:'line',
+    data:{
+      labels,
+      datasets:[{
+        data:vals,
+        borderColor:'#378ADD',
+        borderWidth:1.5,
+        pointRadius:2,
+        pointBackgroundColor:'#378ADD',
+        fill:false,
+        tension:0.3
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{
+        callbacks:{label:c=>`SOH: ${c.parsed.y.toFixed(1)}%`}
+      }},
+      scales:{
+        x:{grid:{display:false},ticks:{font:{size:9},maxRotation:0,maxTicksLimit:5}},
+        y:{min:88,max:100,grid:{color:'rgba(128,128,128,0.1)'},ticks:{font:{size:9},callback:v=>v+'%'}}
+      }
+    }
+  });
+}
+
+function switchTab(btn, id) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.section-tab-content').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('on');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+buildCellMap();
+buildModules();
+buildSOHChart();
+</script>

@@ -1,0 +1,517 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{font-family:var(--font-sans);display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.row{display:grid;gap:12px}
+.r2{grid-template-columns:1fr 1fr}
+.r3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px}
+.mlabel{font-size:11px;color:var(--color-text-secondary);margin-bottom:5px}
+.mval{font-size:22px;font-weight:500;color:var(--color-text-primary);line-height:1}
+.msub{font-size:11px;color:var(--color-text-tertiary);margin-top:3px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ctitle{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.br{background:#FCEBEB;color:#A32D2D}.ba{background:#FAEEDA;color:#854F0B}
+.bg{background:#EAF3DE;color:#3B6D11}.bb{background:#E6F1FB;color:#185FA5}
+.bp{background:#EEEDFE;color:#3C3489}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.tab-row{display:flex;gap:2px;margin-bottom:12px}
+.tab{padding:5px 11px;font-size:12px;border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-secondary);border:none;background:transparent;transition:all .12s}
+.tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
+.tc{display:none}.tc.active{display:block}
+.code-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary);line-height:1.7;overflow-x:auto;white-space:pre}
+.kw{color:#185FA5}.cm{color:var(--color-text-tertiary)}.st{color:#3B6D11}.num{color:#854F0B}
+.chat-wrap{display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;padding-right:2px}
+.msg{border-radius:var(--border-radius-md);padding:10px 13px;font-size:12px;line-height:1.6;max-width:88%}
+.msg-ai{background:var(--color-background-secondary);color:var(--color-text-secondary);align-self:flex-start;border-left:2px solid #1D9E75}
+.msg-user{background:var(--color-background-info);color:var(--color-text-info);align-self:flex-end;text-align:right}
+.msg strong{font-weight:500;color:var(--color-text-primary)}
+.msg-ai strong{color:var(--color-text-primary)}
+.msg-user strong{color:var(--color-text-info)}
+.input-row{display:flex;gap:8px;margin-top:10px}
+.input-row input{flex:1;padding:8px 12px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary)}
+.input-row button{padding:8px 14px;font-size:12px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-primary);cursor:pointer;white-space:nowrap}
+.input-row button:hover{background:var(--color-background-secondary)}
+.quick-btn{padding:5px 11px;font-size:11px;border:0.5px solid var(--color-border-tertiary);border-radius:20px;background:transparent;color:var(--color-text-secondary);cursor:pointer;transition:all .12s}
+.quick-btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.trigger-row{display:flex;flex-direction:column;gap:6px}
+.trigger-item{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);cursor:pointer;transition:background .12s}
+.trigger-item:hover{background:var(--color-background-secondary)}
+.trigger-icon{width:28px;height:28px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.trigger-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.trigger-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.4}
+.hist-item{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.hist-item:last-child{border:none}
+.hist-date{font-size:10px;color:var(--color-text-tertiary);min-width:68px;flex-shrink:0;padding-top:2px}
+.hist-body{flex:1}
+.hist-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.hist-preview{font-size:11px;color:var(--color-text-secondary)}
+.cost-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.cost-row:last-child{border:none}
+.cost-label{font-size:12px;color:var(--color-text-secondary)}
+.cost-val{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.typing span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--color-text-tertiary);animation:bounce .9s infinite}
+.typing span:nth-child(2){animation-delay:.15s}
+.typing span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+.flow-step{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.flow-step:last-child{border:none}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--color-background-info);color:var(--color-text-info);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.step-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.5}
+.step-tag{font-family:var(--font-mono);font-size:10px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px;color:var(--color-text-secondary)}
+</style>
+
+<div class="wrap">
+
+  <div class="row r3">
+    <div class="metric">
+      <div class="mlabel">Analisi totali</div>
+      <div class="mval">47</div>
+      <div class="msub">Ultime 30 sessioni</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Costo API stimato</div>
+      <div class="mval">€0.18</div>
+      <div class="msub">Questo mese · ~€2/mese</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Tempo risposta medio</div>
+      <div class="mval">1.4<span style="font-size:14px;color:var(--color-text-secondary)">s</span></div>
+      <div class="msub">claude-sonnet-4 · streaming</div>
+    </div>
+  </div>
+
+  <div class="row r2">
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">Chat diagnostica AI</span>
+        <span class="badge bg"><span class="bdot"></span>Claude Sonnet 4</span>
+      </div>
+      <div class="chat-wrap" id="chat"></div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px">
+        <button class="quick-btn" onclick="quickAsk('Qual è lo stato generale della batteria?')">Stato batteria</button>
+        <button class="quick-btn" onclick="quickAsk('Posso fare una ricarica rapida DC oggi?')">Ricarica sicura?</button>
+        <button class="quick-btn" onclick="quickAsk('Stima vita residua batteria')">Vita residua</button>
+        <button class="quick-btn" onclick="quickAsk('Urgenza degli errori attuali')">Priorità errori</button>
+      </div>
+      <div class="input-row">
+        <input id="chat-input" type="text" placeholder="Chiedi qualcosa al veicolo…" onkeydown="if(event.key==='Enter')sendChat()">
+        <button onclick="sendChat()">Invia</button>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="ch"><span class="ctitle">Trigger automatici</span><span class="badge bb">4 attivi</span></div>
+        <div class="trigger-row">
+          <div class="trigger-item" onclick="sendPrompt('Come implementare il trigger automatico Claude API quando ESP32 rileva un DTC critico?')">
+            <div class="trigger-icon" style="background:#FCEBEB">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#A32D2D" stroke-width="1.2"/><path d="M7 4v3" stroke="#A32D2D" stroke-width="1.5" stroke-linecap="round"/><circle cx="7" cy="9.5" r=".75" fill="#A32D2D"/></svg>
+            </div>
+            <div>
+              <div class="trigger-title">DTC critico rilevato</div>
+              <div class="trigger-desc">Analisi immediata + notifica · severity = critical</div>
+            </div>
+          </div>
+          <div class="trigger-item" onclick="sendPrompt('Come implementare il trigger Claude API quando SOH scende sotto soglia configurabile?')">
+            <div class="trigger-icon" style="background:#FAEEDA">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1.5" y="3" width="9" height="6" rx="1" stroke="#854F0B" stroke-width="1.2"/><path d="M10.5 5.5V8.5" stroke="#854F0B" stroke-width="1.5" stroke-linecap="round"/><rect x="3" y="4.5" width="4" height="3" rx=".5" fill="#854F0B" opacity=".4"/></svg>
+            </div>
+            <div>
+              <div class="trigger-title">SOH sceso sotto soglia</div>
+              <div class="trigger-desc">Analisi degradazione · soglia configurabile (default 85%)</div>
+            </div>
+          </div>
+          <div class="trigger-item" onclick="sendPrompt('Come fare analisi periodica automatica con Claude API ogni fine sessione di guida?')">
+            <div class="trigger-icon" style="background:#E6F1FB">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5.5" stroke="#185FA5" stroke-width="1.2"/><path d="M7 4v3l2 1.5" stroke="#185FA5" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <div class="trigger-title">Fine sessione di guida</div>
+              <div class="trigger-desc">Report completo automatico · sessione chiusa da ESP32</div>
+            </div>
+          </div>
+          <div class="trigger-item" onclick="sendPrompt('Come implementare il trigger Claude API quando temperatura cella supera delta anomalo?')">
+            <div class="trigger-icon" style="background:#FAEEDA">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v6" stroke="#854F0B" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="10" r="2" stroke="#854F0B" stroke-width="1.2"/><path d="M9 4h1M9 6h1" stroke="#854F0B" stroke-width="1" stroke-linecap="round"/></svg>
+            </div>
+            <div>
+              <div class="trigger-title">Anomalia termica celle</div>
+              <div class="trigger-desc">Delta temp &gt; 3°C tra celle · analisi modulo specifico</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="ch"><span class="ctitle">Costi API dettaglio</span></div>
+        <div class="cost-row"><span class="cost-label">Analisi DTC (avg 800 token)</span><span class="cost-val">€0.003</span></div>
+        <div class="cost-row"><span class="cost-label">Report fine sessione (avg 1200 tk)</span><span class="cost-val">€0.005</span></div>
+        <div class="cost-row"><span class="cost-label">Chat domanda singola (avg 400 tk)</span><span class="cost-val">€0.0015</span></div>
+        <div class="cost-row"><span class="cost-label">100 sessioni/mese stimate</span><span class="cost-val" style="color:#3B6D11">~€1.80</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ctitle">Storico analisi AI</span>
+      <button onclick="sendPrompt('Come costruire la pagina storico analisi AI con filtri per data e severità su Next.js e Supabase?')" style="font-size:11px;padding:4px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Vedi tutto ↗</button>
+    </div>
+    <div id="hist-list">
+      <div class="hist-item">
+        <span class="hist-date">Oggi 09:14</span>
+        <div class="hist-body">
+          <div class="hist-title">DTC critico — P0AA6 isolamento HV <span class="badge br" style="font-size:10px;margin-left:4px">Critico</span></div>
+          <div class="hist-preview">Evitare ricarica DC rapida. Verificare connettori massa HV entro 500 km. Resistenza isolamento sotto 500Ω…</div>
+        </div>
+      </div>
+      <div class="hist-item">
+        <span class="hist-date">Ieri 18:32</span>
+        <div class="hist-body">
+          <div class="hist-title">Report fine sessione — 87 km percorsi <span class="badge bg" style="font-size:10px;margin-left:4px">OK</span></div>
+          <div class="hist-preview">Sessione nella norma. SOC 78%→34%, consumo 14.2 kWh/100km. Temperatura celle stabile tra 22–25°C…</div>
+        </div>
+      </div>
+      <div class="hist-item">
+        <span class="hist-date">15 mar 11:05</span>
+        <div class="hist-body">
+          <div class="hist-title">Anomalia termica — cella #47 delta +3°C <span class="badge ba" style="font-size:10px;margin-left:4px">Avviso</span></div>
+          <div class="hist-preview">Cella 47 modulo 4 mostra +3°C rispetto alla media. Non critica ora, monitorare nelle prossime 10 sessioni…</div>
+        </div>
+      </div>
+      <div class="hist-item">
+        <span class="hist-date">10 mar 08:20</span>
+        <div class="hist-body">
+          <div class="hist-title">Analisi degradazione SOH mensile <span class="badge bb" style="font-size:10px;margin-left:4px">Info</span></div>
+          <div class="hist-preview">SOH 91.3% — degradazione mensile −0.18%, nella media per ZE50 anno 3. Proiezione 80% tra ~5 anni…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ctitle">Implementazione</span></div>
+    <div class="tab-row">
+      <button class="tab on" onclick="sw(this,'prompt')">Prompt engineering</button>
+      <button class="tab" onclick="sw(this,'stream')">Streaming Next.js</button>
+      <button class="tab" onclick="sw(this,'context')">Contesto veicolo</button>
+      <button class="tab" onclick="sw(this,'trigger')">Trigger automatici</button>
+      <button class="tab" onclick="sw(this,'db')">Supabase storage</button>
+    </div>
+
+    <div id="tab-prompt" class="tc active">
+      <div class="code-block"><span class="cm">// web/lib/claude-prompts.ts</span>
+<span class="cm">// Prompt di sistema modulare — si adatta al tipo di analisi</span>
+
+<span class="kw">export const</span> SYSTEM_BASE = <span class="st">`Sei un esperto diagnostico di veicoli elettrici con 20 anni di esperienza.
+Conosci a fondo i protocolli UDS ISO 14229, CAN bus, e le specifiche tecniche
+di Renault, Tesla, PSA/Stellantis, Hyundai/Kia, VW MEB.
+Rispondi SEMPRE in italiano. Sii diretto e concreto — no tecnicismi inutili.`</span>
+
+<span class="kw">export const</span> PROMPT_DTC = (vehicle: Vehicle, dtcs: DTC[]) => ({
+  system: SYSTEM_BASE + <span class="st">`
+Rispondi SOLO in JSON valido con questa struttura esatta:
+{
+  "summary": "stato in 1 frase",
+  "urgenza_globale": "immediata|settimana|monitorare|nessuna",
+  "dtcs": [{
+    "code": "P0AA6",
+    "spiegazione": "cosa significa in italiano semplice",
+    "urgenza": "immediata|settimana|monitorare",
+    "cause_top3": ["causa 1", "causa 2", "causa 3"],
+    "azione": "cosa fare concretamente",
+    "puoi_guidare": true
+  }],
+  "raccomandazione": "azione prioritaria unica da fare subito"
+}`</span>,
+  user: <span class="st">`Veicolo: ${vehicle.make} ${vehicle.model} ${vehicle.year} (${vehicle.km} km)
+SOC: ${vehicle.soc}% · SOH: ${vehicle.soh}% · Temp batteria: ${vehicle.bat_temp}°C
+DTC rilevati via UDS ESP32: ${JSON.stringify(dtcs)}`</span>
+})
+
+<span class="kw">export const</span> PROMPT_CHAT = (vehicle: Vehicle, history: Msg[], question: string) => ({
+  system: SYSTEM_BASE + <span class="st">`
+Hai accesso ai dati in tempo reale del veicolo. Rispondi in max 3-4 frasi.
+Se la domanda non riguarda il veicolo, rispondi che puoi aiutare solo per la diagnostica.`</span>,
+  user: <span class="st">`Veicolo: ${vehicle.make} ${vehicle.model} — SOC:${vehicle.soc}% SOH:${vehicle.soh}%
+DTC attivi: ${vehicle.active_dtcs.join(', ') || 'nessuno'}
+Storico chat: ${JSON.stringify(history.slice(-4))}
+Domanda: ${question}`</span>
+})</div>
+      <button onclick="sendPrompt('Come scrivere un prompt Claude API per analisi predittiva della durata residua della batteria basata su trend SOH Supabase?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Prompt analisi predittiva ↗</button>
+    </div>
+
+    <div id="tab-stream" class="tc">
+      <div class="code-block"><span class="cm">// web/app/api/ai/chat/route.ts — streaming SSE a Next.js</span>
+
+<span class="kw">export async function</span> POST(req: NextRequest) {
+  <span class="kw">const</span> { question, vehicle_context, history } = await req.json()
+
+  <span class="kw">const</span> anthropicStream = await fetch(<span class="st">'https://api.anthropic.com/v1/messages'</span>, {
+    method: <span class="st">'POST'</span>,
+    headers: {
+      <span class="st">'x-api-key'</span>: process.env.ANTHROPIC_API_KEY!,
+      <span class="st">'anthropic-version'</span>: <span class="st">'2023-06-01'</span>,
+      <span class="st">'content-type'</span>: <span class="st">'application/json'</span>
+    },
+    body: JSON.stringify({
+      model: <span class="st">'claude-sonnet-4-20250514'</span>,
+      max_tokens: <span class="num">600</span>,
+      stream: <span class="kw">true</span>,               <span class="cm">// ← abilita streaming SSE</span>
+      ...PROMPT_CHAT(vehicle_context, history, question)
+    })
+  })
+
+  <span class="cm">// Forwarda lo stream SSE direttamente al browser</span>
+  <span class="kw">return new</span> Response(anthropicStream.body, {
+    headers: {
+      <span class="st">'Content-Type'</span>: <span class="st">'text/event-stream'</span>,
+      <span class="st">'Cache-Control'</span>: <span class="st">'no-cache'</span>,
+      <span class="st">'Connection'</span>: <span class="st">'keep-alive'</span>
+    }
+  })
+}
+
+<span class="cm">// web/components/AIChatBox.tsx — consuma lo stream</span>
+<span class="kw">async function</span> sendMessage(question: string) {
+  setTyping(<span class="kw">true</span>)
+  <span class="kw">const</span> res = await fetch(<span class="st">'/api/ai/chat'</span>, {
+    method: <span class="st">'POST'</span>,
+    body: JSON.stringify({ question, vehicle_context, history })
+  })
+  <span class="kw">const</span> reader = res.body!.getReader()
+  <span class="kw">const</span> decoder = <span class="kw">new</span> TextDecoder()
+  <span class="kw">let</span> fullText = <span class="st">''</span>
+
+  <span class="kw">while</span> (<span class="kw">true</span>) {
+    <span class="kw">const</span> { done, value } = await reader.read()
+    <span class="kw">if</span> (done) <span class="kw">break</span>
+    <span class="kw">const</span> chunk = decoder.decode(value)
+    <span class="kw">const</span> lines = chunk.split(<span class="st">'\n'</span>).filter(l => l.startsWith(<span class="st">'data:'</span>))
+    <span class="kw">for</span> (<span class="kw">const</span> line <span class="kw">of</span> lines) {
+      <span class="kw">const</span> evt = JSON.parse(line.slice(<span class="num">5</span>))
+      <span class="kw">if</span> (evt.type === <span class="st">'content_block_delta'</span>)
+        fullText += evt.delta.text
+    }
+    setStreamingText(fullText)     <span class="cm">// aggiorna UI mentre arriva</span>
+  }
+  setTyping(<span class="kw">false</span>)
+  saveToHistory(question, fullText)
+}</div>
+      <button onclick="sendPrompt('Come salvare automaticamente su Supabase ogni risposta della chat AI per costruire lo storico diagnosi?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Salva storico chat ↗</button>
+    </div>
+
+    <div id="tab-context" class="tc">
+      <div class="code-block"><span class="cm">// web/lib/vehicle-context.ts</span>
+<span class="cm">// Costruisce il contesto veicolo per Claude da Supabase</span>
+<span class="cm">// Chiamato prima di ogni richiesta AI</span>
+
+<span class="kw">export async function</span> buildVehicleContext(sessionId: string) {
+  <span class="kw">const</span> supabase = createClient(url, key)
+
+  <span class="cm">// Prende ultima lettura batteria</span>
+  <span class="kw">const</span> { data: battery } = await supabase
+    .from(<span class="st">'battery_readings'</span>)
+    .select(<span class="st">'soc,soh,pack_voltage,temp_avg,temp_max,volt_delta'</span>)
+    .eq(<span class="st">'session_id'</span>, sessionId)
+    .order(<span class="st">'recorded_at'</span>, { ascending: <span class="kw">false</span> })
+    .limit(<span class="num">1</span>).single()
+
+  <span class="cm">// DTC attivi</span>
+  <span class="kw">const</span> { data: dtcs } = await supabase
+    .from(<span class="st">'active_dtcs'</span>)     <span class="cm">// ← la VIEW creata prima</span>
+    .select(<span class="st">'code,description_it,severity,system'</span>)
+    .eq(<span class="st">'session_id'</span>, sessionId)
+
+  <span class="cm">// Trend SOH ultime 30 sessioni</span>
+  <span class="kw">const</span> { data: sohTrend } = await supabase
+    .from(<span class="st">'battery_readings'</span>)
+    .select(<span class="st">'soh,recorded_at'</span>)
+    .order(<span class="st">'recorded_at'</span>, { ascending: <span class="kw">false</span> })
+    .limit(<span class="num">30</span>)
+
+  <span class="kw">const</span> sohDelta = sohTrend
+    ? sohTrend[<span class="num">0</span>].soh - sohTrend[sohTrend.length-<span class="num">1</span>].soh
+    : <span class="num">0</span>
+
+  <span class="kw">return</span> {
+    ...battery,
+    active_dtcs: dtcs?.map(d => d.code) ?? [],
+    dtc_details: dtcs ?? [],
+    soh_trend_30sessions: sohDelta.toFixed(<span class="num">2</span>),
+    <span class="cm">// Claude riceve tutto questo come contesto</span>
+  }
+}
+
+<span class="cm">// Risultato usato in ogni prompt:
+// { soc:78, soh:91, pack_voltage:356, temp_avg:24, temp_max:27,
+//   volt_delta:0.04, active_dtcs:['P0AA6','U0100'],
+//   soh_trend_30sessions:'-0.42' }</span></div>
+      <button onclick="sendPrompt('Come aggiungere al contesto Claude il confronto con altri veicoli dello stesso modello per valutare se la degradazione è nella norma?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Benchmark altri veicoli ↗</button>
+    </div>
+
+    <div id="tab-trigger" class="tc">
+      <div class="code-block"><span class="cm">// web/app/api/ingest/route.ts — logica trigger automatici</span>
+<span class="cm">// Viene chiamato ogni volta che ESP32 invia dati</span>
+
+<span class="kw">async function</span> checkTriggers(data: IngestPayload) {
+  <span class="kw">const</span> triggers: Promise&lt;<span class="kw">void</span>&gt;[] = []
+
+  <span class="cm">// Trigger 1: DTC critico nuovo</span>
+  <span class="kw">const</span> newCritical = data.dtcs?.filter(d =>
+    d.severity === <span class="st">'critical'</span> && !d.was_known
+  )
+  <span class="kw">if</span> (newCritical?.length) {
+    triggers.push(analyzeWithClaude({
+      type: <span class="st">'dtc_critical'</span>,
+      session_id: data.session_id,
+      priority: <span class="st">'immediate'</span>,
+      payload: { dtcs: newCritical }
+    }))
+  }
+
+  <span class="cm">// Trigger 2: SOH sotto soglia (configurabile da utente)</span>
+  <span class="kw">const</span> sohThreshold = await getConfig(<span class="st">'soh_alert_threshold'</span>) ?? <span class="num">85</span>
+  <span class="kw">if</span> (data.battery?.soh && data.battery.soh < sohThreshold) {
+    triggers.push(analyzeWithClaude({
+      type: <span class="st">'soh_threshold'</span>,
+      session_id: data.session_id,
+      priority: <span class="st">'normal'</span>,
+      payload: { soh: data.battery.soh, threshold: sohThreshold }
+    }))
+  }
+
+  <span class="cm">// Trigger 3: Anomalia termica celle (delta > config)</span>
+  <span class="kw">const</span> tempDelta = data.battery?.temp_max - data.battery?.temp_avg
+  <span class="kw">if</span> (tempDelta > <span class="num">3</span>) {
+    triggers.push(analyzeWithClaude({
+      type: <span class="st">'thermal_anomaly'</span>,
+      session_id: data.session_id,
+      priority: <span class="st">'normal'</span>,
+      payload: { temp_delta: tempDelta, cell_temps: data.battery.cell_temps }
+    }))
+  }
+
+  await Promise.all(triggers)  <span class="cm">// tutti in parallelo</span>
+}</div>
+      <button onclick="sendPrompt('Come inviare una notifica push Telegram quando Claude rileva un problema critico al veicolo?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Notifiche Telegram ↗</button>
+    </div>
+
+    <div id="tab-db" class="tc">
+      <div class="code-block"><span class="cm">-- supabase/migrations/008_ai_analyses.sql</span>
+
+<span class="kw">CREATE TABLE</span> ai_analyses (
+  id            UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  session_id    UUID <span class="kw">REFERENCES</span> sessions(id),
+
+  trigger_type  TEXT,   <span class="cm">-- 'dtc_critical','soh_threshold','thermal','manual_chat','session_end'</span>
+  question      TEXT,   <span class="cm">-- domanda utente (se chat)</span>
+  answer        TEXT,   <span class="cm">-- risposta Claude completa</span>
+  answer_json   JSONB,  <span class="cm">-- risposta strutturata (per analisi DTC)</span>
+
+  urgency       TEXT,   <span class="cm">-- 'immediata','settimana','monitorare','nessuna'</span>
+  tokens_used   INT,
+  cost_eur      FLOAT,  <span class="cm">-- tokens * prezzo per monitoraggio costi</span>
+  model         TEXT <span class="kw">DEFAULT</span> <span class="st">'claude-sonnet-4-20250514'</span>,
+
+  vehicle_snapshot JSONB, <span class="cm">-- contesto veicolo al momento dell'analisi</span>
+
+  created_at    TIMESTAMPTZ <span class="kw">DEFAULT NOW</span>()
+);
+
+<span class="cm">-- Indice per storico per sessione</span>
+<span class="kw">CREATE INDEX</span> idx_ai_session <span class="kw">ON</span> ai_analyses(session_id, created_at <span class="kw">DESC</span>);
+
+<span class="cm">-- Vista costi mensili per monitoring</span>
+<span class="kw">CREATE VIEW</span> monthly_ai_costs <span class="kw">AS</span>
+  <span class="kw">SELECT</span>
+    date_trunc(<span class="st">'month'</span>, created_at) <span class="kw">AS</span> month,
+    COUNT(*)                          <span class="kw">AS</span> analyses,
+    SUM(tokens_used)                  <span class="kw">AS</span> total_tokens,
+    ROUND(SUM(cost_eur)::numeric, 4)  <span class="kw">AS</span> total_eur
+  <span class="kw">FROM</span> ai_analyses
+  <span class="kw">GROUP BY</span> <span class="num">1</span>
+  <span class="kw">ORDER BY</span> <span class="num">1</span> <span class="kw">DESC</span>;</div>
+      <button onclick="sendPrompt('Come costruire una dashboard costi API Claude in Next.js che legge monthly_ai_costs da Supabase con un grafico?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Dashboard costi ↗</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const VEHICLE = { make:'Renault', model:'Zoe ZE50', year:2022, soc:78, soh:91, bat_temp:24, active_dtcs:['P0AA6','U0100'] };
+
+const INITIAL = [
+  { role:'ai', text:'<strong>Veicolo connesso.</strong> Ho accesso ai dati in tempo reale della tua Renault Zoe ZE50. SOC 78%, SOH 91%, 2 DTC attivi — P0AA6 richiede attenzione. Come posso aiutarti?' }
+];
+
+let history = [...INITIAL];
+
+const CANNED = {
+  'Qual è lo stato generale della batteria?': 'La batteria è in buone condizioni generali (SOH 91%), ma il DTC <strong>P0AA6</strong> segnala un problema di isolamento HV che richiede verifica entro breve. Evita ricariche rapide DC fino a controllo.',
+  'Posso fare una ricarica rapida DC oggi?': '<strong>Sconsigliato.</strong> Il P0AA6 indica degrado isolamento HV — la ricarica DC ad alta corrente potrebbe aggravare la situazione. Usa ricarica AC lenta (Mode 2/3) fino a diagnosi completa.',
+  'Stima vita residua batteria': 'Con SOH al 91% e degradazione di ~2.1%/anno, la batteria raggiungerà l\'80% (soglia tipica sostituzione) tra circa <strong>5–6 anni</strong>. Trend nella norma per ZE50 anno 3.',
+  'Urgenza degli errori attuali': '<strong>P0AA6:</strong> Urgenza media-alta — verifica entro 500 km. <strong>U0100:</strong> Probabilmente transitorio — monitora. Nessun errore richiede fermata immediata, ma evita ricarica DC.',
+};
+
+function renderChat() {
+  const wrap = document.getElementById('chat');
+  wrap.innerHTML = history.map(m =>
+    `<div class="msg msg-${m.role}">${m.text}</div>`
+  ).join('');
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function addTyping() {
+  const wrap = document.getElementById('chat');
+  const t = document.createElement('div');
+  t.className = 'msg msg-ai typing';
+  t.id = 'typing-indicator';
+  t.innerHTML = '<span></span><span></span><span></span>';
+  wrap.appendChild(t);
+  wrap.scrollTop = wrap.scrollHeight;
+}
+
+function removeTyping() {
+  const t = document.getElementById('typing-indicator');
+  if (t) t.remove();
+}
+
+function quickAsk(q) {
+  document.getElementById('chat-input').value = q;
+  sendChat();
+}
+
+function sendChat() {
+  const input = document.getElementById('chat-input');
+  const q = input.value.trim();
+  if (!q) return;
+  input.value = '';
+  history.push({ role:'user', text: q });
+  renderChat();
+  addTyping();
+  setTimeout(() => {
+    removeTyping();
+    const answer = CANNED[q] ||
+      `Ho analizzato i dati della tua <strong>${VEHICLE.make} ${VEHICLE.model}</strong>. SOC ${VEHICLE.soc}%, SOH ${VEHICLE.soh}%, DTC attivi: ${VEHICLE.active_dtcs.join(', ')}. Per questa specifica domanda ti consiglio di approfondire con il meccanico specializzato EV.`;
+    history.push({ role:'ai', text: answer });
+    renderChat();
+  }, 1200 + Math.random()*600);
+}
+
+function sw(btn, id) {
+  btn.closest('.card').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  btn.closest('.card').querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('on');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+renderChat();
+
+document.getElementById('chat-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendChat();
+});
+</script>

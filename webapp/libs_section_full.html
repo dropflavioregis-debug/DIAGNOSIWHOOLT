@@ -1,0 +1,629 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{font-family:var(--font-sans);display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.row{display:grid;gap:12px}
+.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.r2{grid-template-columns:1fr 320px}
+.r3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px}
+.mlabel{font-size:11px;color:var(--color-text-secondary);margin-bottom:5px}
+.mval{font-size:22px;font-weight:500;color:var(--color-text-primary);line-height:1}
+.msub{font-size:11px;color:var(--color-text-tertiary);margin-top:3px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ctitle{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.br{background:#FCEBEB;color:#A32D2D}.ba{background:#FAEEDA;color:#854F0B}
+.bg{background:#EAF3DE;color:#3B6D11}.bb{background:#E6F1FB;color:#185FA5}
+.bp{background:#EEEDFE;color:#3C3489}.bgr{background:#F1EFE8;color:#444441}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.tab-row{display:flex;gap:2px;margin-bottom:12px;flex-wrap:wrap}
+.tab{padding:5px 11px;font-size:12px;border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-secondary);border:none;background:transparent;transition:all .12s}
+.tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
+.tc{display:none}.tc.active{display:block}
+.code-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary);line-height:1.7;overflow-x:auto;white-space:pre}
+.kw{color:#185FA5}.cm{color:var(--color-text-tertiary)}.st{color:#3B6D11}.num{color:#854F0B}
+.repo-item{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden;margin-bottom:8px;transition:border-color .12s}
+.repo-item:hover{border-color:var(--color-border-secondary)}
+.repo-head{display:flex;align-items:center;gap:10px;padding:11px 13px;cursor:pointer}
+.repo-icon{width:32px;height:32px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.repo-info{flex:1;min-width:0}
+.repo-name{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.repo-meta{font-size:11px;color:var(--color-text-secondary);margin-top:1px}
+.repo-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.repo-expand{display:none;padding:0 13px 12px;border-top:0.5px solid var(--color-border-tertiary)}
+.repo-item.open .repo-expand{display:block}
+.prog-wrap{height:4px;background:var(--color-border-tertiary);border-radius:2px;overflow:hidden;margin:4px 0}
+.prog{height:100%;border-radius:2px;transition:width .5s}
+.vehicle-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:6px;margin-top:8px}
+.veh-chip{display:flex;align-items:center;gap:6px;padding:6px 9px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);font-size:11px;color:var(--color-text-secondary);cursor:pointer;transition:background .12s}
+.veh-chip:hover{background:var(--color-background-primary);border:0.5px solid var(--color-border-secondary)}
+.veh-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.signal-row{display:flex;align-items:center;gap:8px;padding:7px 10px;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer;transition:background .12s}
+.signal-row:hover{background:var(--color-background-secondary)}
+.signal-row:last-child{border:none}
+.sig-did{font-family:var(--font-mono);font-size:10px;color:var(--color-text-tertiary);min-width:48px}
+.sig-name{font-size:12px;color:var(--color-text-primary);flex:1}
+.sig-formula{font-family:var(--font-mono);font-size:10px;color:var(--color-text-secondary)}
+.sig-unit{font-size:11px;color:var(--color-text-tertiary);min-width:28px;text-align:right}
+.sig-cat{font-size:10px;padding:1px 6px;border-radius:10px;white-space:nowrap}
+.search-input{width:100%;padding:7px 11px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);margin-bottom:10px}
+.sync-status{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary)}
+.pulse{width:7px;height:7px;border-radius:50%;background:#1D9E75;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.stat-pill{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:4px;font-size:10px;background:var(--color-background-secondary);color:var(--color-text-secondary)}
+.flow-step{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.flow-step:last-child{border:none}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--color-background-info);color:var(--color-text-info);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.step-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.5}
+.step-tag{font-family:var(--font-mono);font-size:10px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px;color:var(--color-text-secondary)}
+.cat-bat{background:#E6F1FB;color:#185FA5}
+.cat-mot{background:#EAF3DE;color:#3B6D11}
+.cat-chg{background:#FAEEDA;color:#854F0B}
+.cat-gen{background:#F1EFE8;color:#444441}
+.cat-net{background:#EEEDFE;color:#3C3489}
+</style>
+
+<div class="wrap">
+
+  <div class="row r4">
+    <div class="metric">
+      <div class="mlabel">Repo GitHub sincronizzati</div>
+      <div class="mval">8</div>
+      <div class="msub">Ultimo sync 2h fa</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Veicoli supportati</div>
+      <div class="mval">124</div>
+      <div class="msub">48 brand · 124 modelli</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Segnali totali</div>
+      <div class="mval">14.280</div>
+      <div class="msub">DID + formule decodifica</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">DTC nel database</div>
+      <div class="mval">6.847</div>
+      <div class="msub">Generici + brand-specifici</div>
+    </div>
+  </div>
+
+  <div class="row r2">
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">Sorgenti GitHub</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div class="sync-status"><div class="pulse"></div>Auto-sync attivo</div>
+          <button id="sync-btn" onclick="startSync()" style="font-size:11px;padding:4px 11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Sync ora</button>
+        </div>
+      </div>
+      <div id="repo-list"></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="ch"><span class="ctitle">Copertura per brand</span></div>
+        <div id="brand-list"></div>
+      </div>
+      <div class="card">
+        <div class="ch">
+          <span class="ctitle">Formato interno JSON</span>
+          <button onclick="sendPrompt('Come scrivere lo script convert-csv-to-json.ts che converte il formato JejuSoul CSV nel formato interno del sistema?')" style="font-size:11px;padding:3px 9px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Convertitore ↗</button>
+        </div>
+        <div class="code-block" style="font-size:10px">{
+  <span class="st">"vehicle_id"</span>: <span class="st">"renault-zoe-ze50-2020"</span>,
+  <span class="st">"make"</span>: <span class="st">"Renault"</span>, <span class="st">"model"</span>: <span class="st">"Zoe ZE50"</span>,
+  <span class="st">"can_speed"</span>: <span class="num">500</span>, <span class="st">"protocol"</span>: <span class="st">"UDS"</span>,
+  <span class="st">"ecus"</span>: [{ <span class="st">"name"</span>:<span class="st">"BMS"</span>, <span class="st">"address"</span>:<span class="st">"0x7E4"</span> }],
+  <span class="st">"signals"</span>: [{
+    <span class="st">"did"</span>: <span class="st">"0x2002"</span>, <span class="st">"ecu"</span>: <span class="st">"BMS"</span>,
+    <span class="st">"name"</span>: <span class="st">"SOC"</span>, <span class="st">"unit"</span>: <span class="st">"%"</span>,
+    <span class="st">"formula"</span>: <span class="st">"A*0.5"</span>,
+    <span class="st">"category"</span>: <span class="st">"battery"</span>
+  }],
+  <span class="st">"source"</span>: <span class="st">"OBDb/Renault-Zoe"</span>
+}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">
+      <span class="ctitle">Segnali disponibili per veicolo</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <select id="veh-select" onchange="loadSignals(this.value)" style="font-size:11px;padding:4px 8px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary)">
+          <option value="zoe">Renault Zoe ZE50</option>
+          <option value="model3">Tesla Model 3</option>
+          <option value="e208">Peugeot e-208</option>
+          <option value="kona">Hyundai Kona EV</option>
+        </select>
+        <span class="badge bb" id="sig-count">18 segnali</span>
+      </div>
+    </div>
+    <input class="search-input" placeholder="Cerca segnale per nome, DID, categoria…" oninput="filterSignals(this.value)">
+    <div id="signal-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ctitle">Implementazione</span></div>
+    <div class="tab-row">
+      <button class="tab on" onclick="sw(this,'sync')">Script sync GitHub</button>
+      <button class="tab" onclick="sw(this,'conv')">Convertitori formati</button>
+      <button class="tab" onclick="sw(this,'esp')">Caricamento ESP32</button>
+      <button class="tab" onclick="sw(this,'api')">API librerie</button>
+      <button class="tab" onclick="sw(this,'db')">Supabase schema</button>
+    </div>
+
+    <div id="tab-sync" class="tc active">
+      <div class="code-block"><span class="cm">// scripts/sync-libs.ts — clona e aggiorna tutti i repo GitHub</span>
+<span class="cm">// Eseguito: npx tsx sync-libs.ts (cron giornaliero su Vercel)</span>
+
+<span class="kw">import</span> { execSync } <span class="kw">from</span> <span class="st">'child_process'</span>
+<span class="kw">import</span> { existsSync, mkdirSync } <span class="kw">from</span> <span class="st">'fs'</span>
+
+<span class="kw">const</span> LIBS_DIR = <span class="st">'./libs-sources'</span>
+
+<span class="kw">const</span> SOURCES = [
+  { name: <span class="st">'OBDb'</span>,       org: <span class="st">'https://github.com/OBDb'</span>,          type: <span class="st">'org'</span> },
+  { name: <span class="st">'JejuSoul'</span>,   repo: <span class="st">'JejuSoul/OBD-PIDs-for-HKMC-EVs'</span>,   type: <span class="st">'repo'</span> },
+  { name: <span class="st">'iDoka-CAN'</span>,  repo: <span class="st">'iDoka/awesome-automotive-can-id'</span>,   type: <span class="st">'repo'</span> },
+  { name: <span class="st">'OVMS'</span>,        repo: <span class="st">'openvehicles/Open-Vehicle-Monitoring-System-3'</span>, type: <span class="st">'repo'</span> },
+  { name: <span class="st">'PSA-CAN-RE'</span>, repo: <span class="st">'prototux/PSA-CAN-RE'</span>,               type: <span class="st">'repo'</span> },
+  { name: <span class="st">'dtcdb'</span>,       repo: <span class="st">'todrobbins/dtcdb'</span>,                  type: <span class="st">'repo'</span> },
+  { name: <span class="st">'Tesla-M3-CAN'</span>,repo: <span class="st">'teslarent/model3-can'</span>,              type: <span class="st">'repo'</span> },
+  { name: <span class="st">'EVNotify'</span>,    repo: <span class="st">'EVNotify/EVNotify'</span>,                 type: <span class="st">'repo'</span> },
+]
+
+<span class="kw">async function</span> syncAll() {
+  mkdirSync(LIBS_DIR, { recursive: <span class="kw">true</span> })
+
+  <span class="kw">for</span> (<span class="kw">const</span> src <span class="kw">of</span> SOURCES) {
+    <span class="kw">const</span> dest = `${LIBS_DIR}/${src.name}`
+    <span class="kw">if</span> (existsSync(dest)) {
+      <span class="cm">// Aggiorna repo esistente</span>
+      execSync(`git -C ${dest} pull --quiet`)
+      console.log(`✓ ${src.name} aggiornato`)
+    } <span class="kw">else</span> {
+      <span class="cm">// Clona nuovo repo</span>
+      <span class="kw">const</span> url = src.type === <span class="st">'repo'</span>
+        ? `https://github.com/${src.repo}`
+        : src.org
+      execSync(`git clone --depth=1 --quiet ${url} ${dest}`)
+      console.log(`✓ ${src.name} clonato`)
+    }
+  }
+
+  <span class="cm">// Dopo sync → converti e importa</span>
+  await import(<span class="st">'./convert-all'</span>)
+  await import(<span class="st">'./import-to-supabase'</span>)
+}
+
+syncAll()</div>
+      <button onclick="sendPrompt('Come configurare un cron job su Vercel per eseguire sync-libs.ts automaticamente ogni notte?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Cron Vercel ↗</button>
+    </div>
+
+    <div id="tab-conv" class="tc">
+      <div class="code-block"><span class="cm">// scripts/converters/jeju-csv.ts — converte formato JejuSoul</span>
+<span class="cm">// Input:  "003_Kona&Niro_EV_BMS.csv" (header: PID,Length,Name,Equation,Min,Max,Unit)</span>
+<span class="cm">// Output: formato interno JSON signals[]</span>
+
+<span class="kw">import</span> { parse } <span class="kw">from</span> <span class="st">'csv-parse/sync'</span>
+
+<span class="kw">export function</span> convertJejuCSV(csvContent: string, vehicleId: string) {
+  <span class="kw">const</span> rows = parse(csvContent, { columns: <span class="kw">true</span>, skip_empty_lines: <span class="kw">true</span> })
+
+  <span class="kw">return</span> rows.map((row: <span class="kw">any</span>) => ({
+    vehicle_id:  vehicleId,
+    did:         row.PID,          <span class="cm">// es. "0x01F5"</span>
+    name:        row.Name,         <span class="cm">// es. "BMS SOC"</span>
+    formula:     row.Equation,     <span class="cm">// es. "A*0.5"</span>
+    unit:        row.Unit,         <span class="cm">// es. "%"</span>
+    min_value:   parseFloat(row.Min) || <span class="kw">null</span>,
+    max_value:   parseFloat(row.Max) || <span class="kw">null</span>,
+    category:    inferCategory(row.Name),
+    source_file: <span class="st">'JejuSoul/OBD-PIDs-for-HKMC-EVs'</span>
+  }))
+}
+
+<span class="cm">// scripts/converters/dbc.ts — converte file DBC (Tesla, PSA)</span>
+<span class="kw">export function</span> convertDBC(dbcContent: string, vehicleId: string) {
+  <span class="cm">// Parsing manuale DBC: cerca "BO_" (messaggi) e "SG_" (segnali)</span>
+  <span class="kw">const</span> signals = []
+  <span class="kw">const</span> lines = dbcContent.split(<span class="st">'\n'</span>)
+  <span class="kw">let</span> currentMsgId = <span class="kw">null</span>
+
+  <span class="kw">for</span> (<span class="kw">const</span> line <span class="kw">of</span> lines) {
+    <span class="kw">if</span> (line.startsWith(<span class="st">'BO_'</span>)) {
+      <span class="cm">// BO_ 1234 BMS_Status: 8 Vector__XXX</span>
+      currentMsgId = <span class="st">'0x'</span> + parseInt(line.split(<span class="st">' '</span>)[<span class="num">1</span>]).toString(<span class="num">16</span>).toUpperCase()
+    }
+    <span class="kw">if</span> (line.trim().startsWith(<span class="st">'SG_'</span>) && currentMsgId) {
+      <span class="cm">// SG_ SOC : 0|8@1+ (0.5,0) [0|100] "%" Vector__XXX</span>
+      <span class="kw">const</span> m = line.match(
+        /SG_\s+(\w+)\s*:\s*(\d+)\|(\d+).*\(([^,]+),([^)]+)\).*\[([^\]]+)\]\s+"([^"]*)"/)
+      <span class="kw">if</span> (m) signals.push({
+        vehicle_id: vehicleId, did: currentMsgId,
+        name: m[<span class="num">1</span>], formula: `A*${m[<span class="num">4</span>]}+${m[<span class="num">5</span>]}`,
+        unit: m[<span class="num">7</span>], category: inferCategory(m[<span class="num">1</span>]),
+        source_file: <span class="st">'DBC'</span>
+      })
+    }
+  }
+  <span class="kw">return</span> signals
+}
+
+<span class="kw">function</span> inferCategory(name: string): string {
+  <span class="kw">const</span> n = name.toLowerCase()
+  <span class="kw">if</span> (/soc|soh|cell|batt|pack|volt|temp/.test(n)) <span class="kw">return</span> <span class="st">'battery'</span>
+  <span class="kw">if</span> (/motor|torque|rpm|speed/.test(n))            <span class="kw">return</span> <span class="st">'motor'</span>
+  <span class="kw">if</span> (/charg|obc|pilot|inlet/.test(n))             <span class="kw">return</span> <span class="st">'charging'</span>
+  <span class="kw">if</span> (/can|bus|ecu|comm/.test(n))                  <span class="kw">return</span> <span class="st">'network'</span>
+  <span class="kw">return</span> <span class="st">'general'</span>
+}</div>
+      <button onclick="sendPrompt('Come scrivere il convertitore per il formato OBDb signalset v3 JSON in formato interno del sistema?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Convertitore OBDb ↗</button>
+    </div>
+
+    <div id="tab-esp" class="tc">
+      <div class="code-block"><span class="cm">// firmware/src/vehicle/lib_loader.cpp</span>
+<span class="cm">// Scarica libreria veicolo da server e la salva in SPIFFS</span>
+<span class="cm">// L'ESP32 usa il file locale per tutte le letture UDS</span>
+
+<span class="kw">#include</span> <span class="st">"lib_loader.h"</span>
+<span class="kw">#include</span> <span class="st">&lt;SPIFFS.h&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;ArduinoJson.h&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;HTTPClient.h&gt;</span>
+
+<span class="kw">bool</span> LibLoader::loadForVehicle(<span class="kw">const</span> String& vehicle_id) {
+  String path = <span class="st">"/libs/"</span> + vehicle_id + <span class="st">".json"</span>;
+
+  <span class="cm">// 1. Usa cache SPIFFS se fresca (< 7 giorni)</span>
+  <span class="kw">if</span> (SPIFFS.exists(path)) {
+    File f = SPIFFS.open(path, <span class="st">"r"</span>);
+    uint32_t age = (millis() - f.getLastWrite()) / <span class="num">1000</span> / <span class="num">86400</span>;
+    f.close();
+    <span class="kw">if</span> (age < <span class="num">7</span>) {
+      Serial.println(<span class="st">"[LIB] Cache valida, skip download"</span>);
+      <span class="kw">return</span> parseFromSPIFFS(path);
+    }
+  }
+
+  <span class="cm">// 2. Scarica JSON da Vercel API</span>
+  HTTPClient http;
+  String url = nvs.get(<span class="st">"server_url"</span>) + <span class="st">"/api/libs/"</span> + vehicle_id;
+  http.begin(url);
+  http.addHeader(<span class="st">"X-API-Key"</span>, nvs.get(<span class="st">"api_key"</span>));
+  <span class="kw">int</span> code = http.GET();
+
+  <span class="kw">if</span> (code != <span class="num">200</span>) {
+    Serial.printf(<span class="st">"[LIB] Download fallito: %d\n"</span>, code);
+    <span class="kw">return</span> SPIFFS.exists(path) ? parseFromSPIFFS(path) : <span class="kw">false</span>;
+  }
+
+  <span class="cm">// 3. Salva in SPIFFS</span>
+  String json = http.getString();
+  File f = SPIFFS.open(path, <span class="st">"w"</span>);
+  f.print(json); f.close();
+  http.end();
+
+  <span class="kw">return</span> parseFromSPIFFS(path);
+}
+
+<span class="kw">bool</span> LibLoader::parseFromSPIFFS(<span class="kw">const</span> String& path) {
+  File f = SPIFFS.open(path, <span class="st">"r"</span>);
+  DynamicJsonDocument doc(<span class="num">32768</span>);  <span class="cm">// 32KB per libreria</span>
+  deserializeJson(doc, f);
+  f.close();
+
+  <span class="cm">// Popola array segnali in RAM per accesso veloce durante lettura</span>
+  JsonArray signals = doc[<span class="st">"signals"</span>];
+  <span class="kw">for</span> (<span class="kw">auto</span> sig : signals) {
+    Signal s;
+    strlcpy(s.did,     sig[<span class="st">"did"</span>],      <span class="kw">sizeof</span>(s.did));
+    strlcpy(s.name,    sig[<span class="st">"name"</span>],     <span class="kw">sizeof</span>(s.name));
+    strlcpy(s.formula, sig[<span class="st">"formula"</span>],  <span class="kw">sizeof</span>(s.formula));
+    strlcpy(s.unit,    sig[<span class="st">"unit"</span>],     <span class="kw">sizeof</span>(s.unit));
+    activeSignals.push_back(s);
+  }
+  Serial.printf(<span class="st">"[LIB] %d segnali caricati\n"</span>, activeSignals.size());
+  <span class="kw">return true</span>;
+}</div>
+      <button onclick="sendPrompt('Quanta memoria SPIFFS serve su ESP32-S3 per le librerie e come partizionare la flash ottimalmente?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Ottimizzazione SPIFFS ↗</button>
+    </div>
+
+    <div id="tab-api" class="tc">
+      <div class="code-block"><span class="cm">// web/app/api/libs/[vehicle_id]/route.ts</span>
+<span class="cm">// Serve libreria JSON all'ESP32 — risposta compressa gzip</span>
+
+<span class="kw">export async function</span> GET(
+  req: NextRequest,
+  { params }: { params: { vehicle_id: string } }
+) {
+  <span class="cm">// Auth: valida API key nell'header</span>
+  <span class="kw">const</span> apiKey = req.headers.get(<span class="st">'x-api-key'</span>)
+  <span class="kw">if</span> (apiKey !== process.env.DEVICE_API_KEY)
+    <span class="kw">return</span> NextResponse.json({ error: <span class="st">'unauthorized'</span> }, { status: <span class="num">401</span> })
+
+  <span class="kw">const</span> { vehicle_id } = params
+
+  <span class="cm">// Recupera segnali da Supabase</span>
+  <span class="kw">const</span> { data: vehicle } = await supabase
+    .from(<span class="st">'vehicles'</span>)
+    .select(<span class="st">'*'</span>)
+    .eq(<span class="st">'slug'</span>, vehicle_id)
+    .single()
+
+  <span class="kw">if</span> (!vehicle) <span class="kw">return</span> NextResponse.json({ error: <span class="st">'not found'</span> }, { status: <span class="num">404</span> })
+
+  <span class="kw">const</span> { data: signals } = await supabase
+    .from(<span class="st">'signals'</span>)
+    .select(<span class="st">'did,name,formula,unit,category,ecu_address,min_value,max_value'</span>)
+    .eq(<span class="st">'vehicle_id'</span>, vehicle.id)
+
+  <span class="kw">const</span> { data: ecus } = await supabase
+    .from(<span class="st">'ecus'</span>).select(<span class="st">'name,address'</span>)
+    .eq(<span class="st">'vehicle_id'</span>, vehicle.id)
+
+  <span class="kw">const</span> lib = {
+    vehicle_id, make: vehicle.make, model: vehicle.model,
+    can_speed: vehicle.can_speed, protocol: vehicle.protocol,
+    ecus, signals,
+    generated_at: <span class="kw">new</span> Date().toISOString()
+  }
+
+  <span class="cm">// Cache Edge per 24h — evita query Supabase ad ogni boot ESP32</span>
+  <span class="kw">return</span> NextResponse.json(lib, {
+    headers: { <span class="st">'Cache-Control'</span>: <span class="st">'public, max-age=86400, stale-while-revalidate'</span> }
+  })
+}
+
+<span class="cm">// web/app/api/libs/detect/route.ts — riconosce veicolo da fingerprint CAN</span>
+<span class="kw">export async function</span> POST(req: NextRequest) {
+  <span class="kw">const</span> { can_ids } = await req.json()
+  <span class="cm">// can_ids: ["0x354","0x7EC","0x18DAF1EF",...]</span>
+
+  <span class="kw">const</span> { data: vehicles } = await supabase
+    .from(<span class="st">'vehicles'</span>)
+    .select(<span class="st">'id,slug,make,model,can_fingerprint'</span>)
+
+  <span class="cm">// Trova il veicolo con più CAN ID in comune</span>
+  <span class="kw">const</span> best = vehicles
+    ?.map(v => ({
+      ...v,
+      score: v.can_fingerprint?.filter((id: string) =>
+        can_ids.includes(id)).length ?? <span class="num">0</span>
+    }))
+    .sort((a, b) => b.score - a.score)[<span class="num">0</span>]
+
+  <span class="kw">if</span> (!best || best.score < <span class="num">3</span>)
+    <span class="kw">return</span> NextResponse.json({ detected: <span class="kw">false</span> })
+
+  <span class="kw">return</span> NextResponse.json({ detected: <span class="kw">true</span>, vehicle: best })
+}</div>
+      <button onclick="sendPrompt('Come migliorare il fingerprint CAN per distinguere varianti dello stesso modello come Zoe ZE40 vs ZE50?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Fingerprint avanzato ↗</button>
+    </div>
+
+    <div id="tab-db" class="tc">
+      <div class="code-block"><span class="cm">-- supabase/migrations/001-004_libs.sql</span>
+
+<span class="kw">CREATE TABLE</span> vehicles (
+  id            UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  slug          TEXT <span class="kw">UNIQUE NOT NULL</span>,  <span class="cm">-- 'renault-zoe-ze50-2020'</span>
+  make          TEXT <span class="kw">NOT NULL</span>,
+  model         TEXT <span class="kw">NOT NULL</span>,
+  year_from     INT, year_to INT,
+  battery_kwh   FLOAT,                  <span class="cm">-- capacità pack nominale</span>
+  can_speed     INT <span class="kw">DEFAULT</span> <span class="num">500</span>,
+  protocol      TEXT <span class="kw">DEFAULT</span> <span class="st">'UDS'</span>,
+  can_fingerprint TEXT[],               <span class="cm">-- CAN IDs per auto-detect</span>
+  source_repo   TEXT,
+  created_at    TIMESTAMPTZ <span class="kw">DEFAULT NOW</span>()
+);
+
+<span class="kw">CREATE TABLE</span> ecus (
+  id          UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  vehicle_id  UUID <span class="kw">REFERENCES</span> vehicles(id) <span class="kw">ON DELETE CASCADE</span>,
+  name        TEXT,          <span class="cm">-- 'BMS', 'BCM', 'MCU'</span>
+  address     TEXT,          <span class="cm">-- '0x7E4'</span>
+  resp_address TEXT          <span class="cm">-- '0x7EC' (address+8 di default)</span>
+);
+
+<span class="kw">CREATE TABLE</span> signals (
+  id          UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  vehicle_id  UUID <span class="kw">REFERENCES</span> vehicles(id) <span class="kw">ON DELETE CASCADE</span>,
+  ecu_id      UUID <span class="kw">REFERENCES</span> ecus(id),
+  did         TEXT,          <span class="cm">-- '0x2002'</span>
+  name        TEXT,          <span class="cm">-- 'SOC'</span>
+  formula     TEXT,          <span class="cm">-- 'A*0.5'</span>
+  unit        TEXT,
+  category    TEXT,          <span class="cm">-- battery|motor|charging|network|general</span>
+  min_value   FLOAT,
+  max_value   FLOAT,
+  source_file TEXT           <span class="cm">-- tracciabilità repo sorgente</span>
+);
+
+<span class="cm">-- Indice per query ESP32 (per vehicle_id + category)</span>
+<span class="kw">CREATE INDEX</span> idx_signals_vehicle_cat <span class="kw">ON</span> signals(vehicle_id, category);
+
+<span class="cm">-- Full-text search sui segnali (per la UI di ricerca)</span>
+<span class="kw">CREATE INDEX</span> idx_signals_fts <span class="kw">ON</span> signals
+  <span class="kw">USING</span> gin(to_tsvector(<span class="st">'english'</span>, name || <span class="st">' '</span> || coalesce(unit,<span class="st">''</span>)));</div>
+      <button onclick="sendPrompt('Come scrivere import-to-supabase.ts che importa tutti i JSON convertiti nel database Supabase in batch efficienti?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Script import batch ↗</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const REPOS = [
+  { name:'OBDb', desc:'Community OBD database — 100+ modelli', covers:'Tutti i brand principali', format:'JSON signalset v3', signals:4820, status:'synced', color:'#1D9E75', icon:'O' },
+  { name:'JejuSoul — HKMC EVs', desc:'Hyundai, Kia, Genesis EV PIDs', covers:'Kona EV, Niro EV, Ioniq 5, EV6, EV9', format:'CSV extendedpids', signals:2140, status:'synced', color:'#378ADD', icon:'J' },
+  { name:'iDoka — CAN IDs', desc:'Automotive CAN ID database', covers:'Tesla, Renault, VW MEB, PSA', format:'DBC + JSON', signals:3200, status:'synced', color:'#7F77DD', icon:'i' },
+  { name:'OVMS', desc:'Open Vehicle Monitoring System v3', covers:'Nissan Leaf, Renault Zoe, Tesla S, VW e-Golf', format:'C++ modules', signals:1840, status:'synced', color:'#D85A30', icon:'V' },
+  { name:'PSA-CAN-RE', desc:'PSA Group CAN reverse engineering', covers:'e-208, e-C4, DS3 Crossback, Berlingo', format:'DBC', signals:980, status:'synced', color:'#5DCAA5', icon:'P' },
+  { name:'dtcdb', desc:'Generic DTC descriptions database', covers:'Tutti i brand — codici generici', format:'JSON', signals:6847, status:'synced', color:'#EF9F27', icon:'D' },
+  { name:'Tesla Model 3 CAN', desc:'Model 3 / Y CAN signals', covers:'Tesla Model 3, Model Y', format:'DBC', signals:760, status:'synced', color:'#E24B4A', icon:'T' },
+  { name:'EVNotify', desc:'EV data aggregator signals', covers:'VW ID.3, ID.4, Skoda Enyaq, Audi Q4', format:'JSON', signals:500, status:'updating', color:'#888780', icon:'E' },
+];
+
+const BRANDS = [
+  { name:'Renault', pct:92, count:8 },
+  { name:'Tesla', pct:85, count:6 },
+  { name:'PSA/Stellantis', pct:78, count:14 },
+  { name:'Hyundai/Kia', pct:95, count:18 },
+  { name:'VW Group MEB', pct:70, count:12 },
+  { name:'Nissan', pct:88, count:5 },
+];
+
+const SIGNALS = {
+  zoe:[
+    { did:'0x2002', name:'SOC', formula:'A*0.5', unit:'%', cat:'battery' },
+    { did:'0x2006', name:'SOH', formula:'A*0.5', unit:'%', cat:'battery' },
+    { did:'0x2001', name:'Pack voltage', formula:'A*2', unit:'V', cat:'battery' },
+    { did:'0x2003', name:'Pack current', formula:'(A-128)*2', unit:'A', cat:'battery' },
+    { did:'0x4003', name:'Cell temperatures', formula:'A-40', unit:'°C', cat:'battery' },
+    { did:'0x4001', name:'Cell voltages', formula:'A*0.01', unit:'V', cat:'battery' },
+    { did:'0x300F', name:'Motor RPM', formula:'(A*256+B)', unit:'rpm', cat:'motor' },
+    { did:'0x3001', name:'Motor torque', formula:'(A-128)*2', unit:'Nm', cat:'motor' },
+    { did:'0x300B', name:'Motor temp', formula:'A-40', unit:'°C', cat:'motor' },
+    { did:'0x5003', name:'Charge power', formula:'A*0.1', unit:'kW', cat:'charging' },
+    { did:'0x5001', name:'Charge state', formula:'A', unit:'', cat:'charging' },
+    { did:'0x7001', name:'Odometer', formula:'A*256+B', unit:'km', cat:'general' },
+    { did:'0x7C10', name:'VIN', formula:'ASCII', unit:'', cat:'general' },
+  ],
+  model3:[
+    { did:'0x0102', name:'BMS SOC', formula:'A*0.1', unit:'%', cat:'battery' },
+    { did:'0x0132', name:'Pack voltage', formula:'A*0.1', unit:'V', cat:'battery' },
+    { did:'0x0134', name:'Pack current', formula:'(A-32768)*0.1', unit:'A', cat:'battery' },
+    { did:'0x0156', name:'Max cell temp', formula:'A*0.1-273', unit:'°C', cat:'battery' },
+    { did:'0x0135', name:'Cell delta V', formula:'A*0.001', unit:'V', cat:'battery' },
+    { did:'0x0280', name:'Motor speed', formula:'A', unit:'rpm', cat:'motor' },
+    { did:'0x0282', name:'Motor torque', formula:'A*0.1', unit:'Nm', cat:'motor' },
+    { did:'0x0390', name:'Charge amps', formula:'A*0.1', unit:'A', cat:'charging' },
+  ],
+  e208:[
+    { did:'0x2210', name:'HV Battery SOC', formula:'A*0.5', unit:'%', cat:'battery' },
+    { did:'0x2215', name:'Battery voltage', formula:'(A*256+B)*0.1', unit:'V', cat:'battery' },
+    { did:'0x2220', name:'Battery temp avg', formula:'A-50', unit:'°C', cat:'battery' },
+    { did:'0x3110', name:'Motor torque', formula:'(A*256+B)*0.1-3276.8', unit:'Nm', cat:'motor' },
+    { did:'0x3115', name:'Motor temp', formula:'A-50', unit:'°C', cat:'motor' },
+    { did:'0x4210', name:'OBC power', formula:'A*0.1', unit:'kW', cat:'charging' },
+    { did:'0x1010', name:'Odometer', formula:'A*65536+B*256+C', unit:'km', cat:'general' },
+  ],
+  kona:[
+    { did:'0x01F5', name:'BMS SOC', formula:'A*0.5', unit:'%', cat:'battery' },
+    { did:'0x0101', name:'Max cell voltage', formula:'A*0.02', unit:'V', cat:'battery' },
+    { did:'0x0105', name:'Min cell voltage', formula:'A*0.02', unit:'V', cat:'battery' },
+    { did:'0x0103', name:'Max cell temp', formula:'A-40', unit:'°C', cat:'battery' },
+    { did:'0x0104', name:'Pack voltage', formula:'(A*256+B)*0.1', unit:'V', cat:'battery' },
+    { did:'0x0102', name:'Pack current', formula:'(A*256+B)*0.1-3276.8', unit:'A', cat:'battery' },
+    { did:'0x0149', name:'SOH', formula:'A*0.1', unit:'%', cat:'battery' },
+    { did:'0x0200', name:'Motor RPM', formula:'A*256+B', unit:'rpm', cat:'motor' },
+    { did:'0x0202', name:'Vehicle speed', formula:'A*0.015625', unit:'km/h', cat:'general' },
+  ],
+};
+
+let allSignals = SIGNALS.zoe;
+let currentVeh = 'zoe';
+
+const CAT_CLS = { battery:'cat-bat', motor:'cat-mot', charging:'cat-chg', general:'cat-gen', network:'cat-net' };
+const CAT_LBL = { battery:'batteria', motor:'motore', charging:'ricarica', general:'generale', network:'rete' };
+
+function renderRepos() {
+  document.getElementById('repo-list').innerHTML = REPOS.map((r,i)=>`
+    <div class="repo-item" id="ri-${i}" onclick="toggleRepo(${i})">
+      <div class="repo-head">
+        <div class="repo-icon" style="background:${r.color}22;color:${r.color};font-size:13px;font-weight:600">${r.icon}</div>
+        <div class="repo-info">
+          <div class="repo-name">${r.name}</div>
+          <div class="repo-meta">${r.desc}</div>
+        </div>
+        <div class="repo-right">
+          <span class="badge ${r.status==='synced'?'bg':'ba'}">${r.status==='synced'?'Sincronizzato':'Updating'}</span>
+          <span class="stat-pill">${r.signals.toLocaleString()} segnali</span>
+        </div>
+      </div>
+      <div class="repo-expand">
+        <div style="padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:9px 11px">
+            <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:3px">Veicoli coperti</div>
+            <div style="font-size:12px;color:var(--color-text-secondary)">${r.covers}</div>
+          </div>
+          <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:9px 11px">
+            <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:3px">Formato sorgente</div>
+            <div style="font-size:12px;color:var(--color-text-secondary)">${r.format}</div>
+          </div>
+        </div>
+        <button onclick="event.stopPropagation();sendPrompt('Come convertire il formato ${r.format} del repo ${r.name} nel formato interno JSON del sistema?')"
+          style="margin-top:8px;font-size:11px;padding:5px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">
+          Dettaglio conversione ↗
+        </button>
+      </div>
+    </div>`).join('');
+}
+
+function toggleRepo(i) {
+  const el = document.getElementById('ri-'+i);
+  const was = el.classList.contains('open');
+  document.querySelectorAll('.repo-item').forEach(x=>x.classList.remove('open'));
+  if (!was) el.classList.add('open');
+}
+
+function renderBrands() {
+  document.getElementById('brand-list').innerHTML = BRANDS.map(b=>`
+    <div style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:3px">
+        <span style="font-size:12px;color:var(--color-text-primary)">${b.name}</span>
+        <span style="font-size:11px;color:var(--color-text-secondary)">${b.count} modelli · ${b.pct}%</span>
+      </div>
+      <div class="prog-wrap"><div class="prog" style="width:${b.pct}%;background:${b.pct>85?'#1D9E75':b.pct>70?'#378ADD':'#EF9F27'}"></div></div>
+    </div>`).join('');
+}
+
+function renderSignals(filter) {
+  const sigs = filter
+    ? allSignals.filter(s => s.name.toLowerCase().includes(filter) || s.did.includes(filter) || s.cat.includes(filter))
+    : allSignals;
+  document.getElementById('sig-count').textContent = `${sigs.length} segnali`;
+  document.getElementById('signal-list').innerHTML = sigs.map(s=>`
+    <div class="signal-row" onclick="sendPrompt('Come leggere il segnale ${s.name} (DID ${s.did}) via UDS su ESP32 e applicare la formula ${s.formula}?')">
+      <span class="sig-did">${s.did}</span>
+      <span class="sig-name">${s.name}</span>
+      <span class="sig-formula">${s.formula}</span>
+      <span class="sig-unit">${s.unit}</span>
+      <span class="sig-cat ${CAT_CLS[s.cat]||'cat-gen'}">${CAT_LBL[s.cat]||s.cat}</span>
+    </div>`).join('');
+}
+
+function filterSignals(q) { renderSignals(q.toLowerCase()); }
+
+function loadSignals(veh) {
+  currentVeh = veh;
+  allSignals = SIGNALS[veh] || [];
+  renderSignals('');
+}
+
+let syncing = false;
+function startSync() {
+  if (syncing) return;
+  syncing = true;
+  const btn = document.getElementById('sync-btn');
+  btn.textContent = 'Syncing…';
+  btn.disabled = true;
+  setTimeout(()=>{ btn.textContent='Sync ora'; btn.disabled=false; syncing=false; }, 3000);
+  sendPrompt('Come avviare manualmente la sincronizzazione delle librerie GitHub e importare in Supabase con un click dalla dashboard?');
+}
+
+function sw(btn, id) {
+  btn.closest('.card').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  btn.closest('.card').querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('on');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+renderRepos();
+renderBrands();
+renderSignals('');
+</script>

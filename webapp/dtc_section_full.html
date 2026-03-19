@@ -1,0 +1,522 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{font-family:var(--font-sans);display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.row{display:grid;gap:12px}
+.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.r2{grid-template-columns:1fr 340px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px}
+.mlabel{font-size:11px;color:var(--color-text-secondary);margin-bottom:5px}
+.mval{font-size:24px;font-weight:500;color:var(--color-text-primary);line-height:1}
+.msub{font-size:11px;color:var(--color-text-tertiary);margin-top:4px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ctitle{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.br{background:#FCEBEB;color:#A32D2D}.ba{background:#FAEEDA;color:#854F0B}
+.bg{background:#EAF3DE;color:#3B6D11}.bb{background:#E6F1FB;color:#185FA5}
+.bp{background:#EEEDFE;color:#3C3489}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.tab-row{display:flex;gap:2px;margin-bottom:12px}
+.tab{padding:5px 11px;font-size:12px;border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-secondary);border:none;background:transparent;transition:all .12s}
+.tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
+.tc{display:none}.tc.active{display:block}
+.code-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary);line-height:1.7;overflow-x:auto;white-space:pre}
+.kw{color:#185FA5}.cm{color:var(--color-text-tertiary)}.st{color:#3B6D11}.num{color:#854F0B}
+.dtc-item{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden;cursor:pointer;transition:border-color .12s;margin-bottom:8px}
+.dtc-item:hover{border-color:var(--color-border-secondary)}
+.dtc-item.expanded .dtc-expand{display:block}
+.dtc-head{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.dtc-sev{width:3px;align-self:stretch;border-radius:2px;flex-shrink:0}
+.dtc-code{font-size:11px;font-weight:500;font-family:var(--font-mono);padding:3px 8px;border-radius:4px;flex-shrink:0}
+.dtc-body{flex:1;min-width:0}
+.dtc-name{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.dtc-meta{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+.dtc-expand{display:none;padding:0 12px 12px 25px;border-top:0.5px solid var(--color-border-tertiary);margin-top:0}
+.dtc-expand-inner{padding-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.expand-block{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px}
+.expand-label{font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em}
+.expand-val{font-size:12px;color:var(--color-text-secondary);line-height:1.5}
+.ecu-list{display:flex;flex-direction:column;gap:6px}
+.ecu-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md)}
+.ecu-addr{font-size:11px;font-family:var(--font-mono);color:var(--color-text-tertiary);min-width:46px}
+.ecu-name{font-size:12px;color:var(--color-text-primary);flex:1;font-weight:500}
+.ecu-count{font-size:11px;color:var(--color-text-secondary)}
+.ecu-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.flow-step{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.flow-step:last-child{border-bottom:none}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--color-background-info);color:var(--color-text-info);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.step-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.5}
+.step-tag{font-family:var(--font-mono);font-size:10px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px;color:var(--color-text-secondary)}
+.scan-btn{padding:7px 16px;font-size:12px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-primary);cursor:pointer;transition:background .12s}
+.scan-btn:hover{background:var(--color-background-secondary)}
+.scan-btn.danger{border-color:var(--color-border-danger);color:var(--color-text-danger)}
+.ai-msg{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px 14px;font-size:12px;color:var(--color-text-secondary);line-height:1.6;border-left:2px solid #1D9E75;margin-bottom:8px}
+.ai-msg strong{color:var(--color-text-primary);font-weight:500}
+.progress-wrap{height:3px;background:var(--color-border-tertiary);border-radius:2px;overflow:hidden;margin:8px 0}
+.progress-bar{height:100%;border-radius:2px;background:#1D9E75;width:0;transition:width .4s}
+</style>
+
+<div class="wrap">
+
+  <div class="row r4">
+    <div class="metric">
+      <div class="mlabel">DTC attivi</div>
+      <div class="mval" style="color:#A32D2D">2</div>
+      <div class="msub">Richiedono attenzione</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">DTC in sospeso</div>
+      <div class="mval" style="color:#854F0B">3</div>
+      <div class="msub">Confermati parzialmente</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Centraline scansionate</div>
+      <div class="mval">11</div>
+      <div class="msub">di 11 ECU risposto</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Ultima scansione</div>
+      <div class="mval" style="font-size:16px;padding-top:4px">2 min fa</div>
+      <div class="msub">Sessione #2847</div>
+    </div>
+  </div>
+
+  <div class="row r2">
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">Codici errore</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="scan-btn" id="scan-btn" onclick="startScan()">Nuova scansione</button>
+          <button class="scan-btn danger" onclick="confirmClear()">Cancella tutti</button>
+        </div>
+      </div>
+      <div id="scan-progress" style="display:none">
+        <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:4px" id="scan-status">Interrogando 0x7DF…</div>
+        <div class="progress-wrap"><div class="progress-bar" id="pbar"></div></div>
+      </div>
+      <div class="tab-row">
+        <button class="tab on" onclick="filterDTC(this,'all')">Tutti (5)</button>
+        <button class="tab" onclick="filterDTC(this,'active')">Attivi (2)</button>
+        <button class="tab" onclick="filterDTC(this,'pending')">In sospeso (3)</button>
+        <button class="tab" onclick="filterDTC(this,'cleared')">Cancellati (8)</button>
+      </div>
+      <div id="dtc-list"></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="ch"><span class="ctitle">Centraline (ECU)</span></div>
+        <div class="ecu-list" id="ecu-list"></div>
+      </div>
+      <div class="card">
+        <div class="ch">
+          <span class="ctitle">Analisi AI</span>
+          <span class="badge bg"><span class="bdot"></span>Claude</span>
+        </div>
+        <div class="ai-msg">
+          <strong>P0AA6 richiede intervento</strong><br>
+          Isolamento HV degradato. Evitare ricarica rapida DC. Verificare connettori massa HV e cavi batteria entro 500 km.
+        </div>
+        <div class="ai-msg" style="border-left-color:#378ADD">
+          <strong>U0100 probabilmente transitorio</strong><br>
+          Timeout CAN bus BCM — spesso causato da connettore allentato sotto il cruscotto. Verificare JP12 e JP15.
+        </div>
+        <button onclick="sendPrompt('Come implementare la chiamata Claude API per analizzare automaticamente i DTC letti da ESP32?')" style="width:100%;font-size:11px;padding:7px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Analisi completa con Claude ↗</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ctitle">Implementazione</span></div>
+    <div class="tab-row">
+      <button class="tab on" onclick="sw(this,'esp')">ESP32 firmware</button>
+      <button class="tab" onclick="sw(this,'api')">API Vercel</button>
+      <button class="tab" onclick="sw(this,'db')">Supabase schema</button>
+      <button class="tab" onclick="sw(this,'claude')">Claude AI</button>
+      <button class="tab" onclick="sw(this,'flow')">Flusso dati</button>
+    </div>
+
+    <div id="tab-esp" class="tc active">
+      <div class="code-block"><span class="cm">// firmware/src/uds/dtc_reader.cpp</span>
+<span class="cm">// Legge DTC da TUTTE le ECU — broadcast 0x7DF + indirizzamento diretto</span>
+
+<span class="kw">struct</span> DtcEntry {
+  <span class="kw">char</span>    code[<span class="num">7</span>];    <span class="cm">// es. "P0AA6"</span>
+  uint8_t status;    <span class="cm">// byte di stato UDS</span>
+  uint8_t ecu_addr;  <span class="cm">// ECU sorgente</span>
+};
+
+<span class="cm">// Indirizzi ECU da libreria JSON (caricata da SPIFFS)</span>
+uint8_t ECU_ADDRS[] = {
+  <span class="num">0x7E0</span>, <span class="cm">// ECM/PCM</span>
+  <span class="num">0x7E4</span>, <span class="cm">// BMS batteria</span>
+  <span class="num">0x7A0</span>, <span class="cm">// BCM body</span>
+  <span class="num">0x760</span>, <span class="cm">// ABS/ESP</span>
+  <span class="num">0x744</span>, <span class="cm">// OBC caricatore</span>
+  <span class="num">0x77E</span>, <span class="cm">// HVAC</span>
+};
+
+<span class="kw">void</span> DtcReader::scanAll(std::vector&lt;DtcEntry&gt;&amp; out) {
+  <span class="kw">for</span> (uint8_t addr : ECU_ADDRS) {
+    <span class="cm">// SID 0x19 sub 0x02 = reportDTCByStatusMask</span>
+    <span class="cm">// 0xFF = tutti i DTC indipendentemente dallo stato</span>
+    uint8_t req[] = {<span class="num">0x03</span>, <span class="num">0x19</span>, <span class="num">0x02</span>, <span class="num">0xFF</span>};
+    uint8_t resp[<span class="num">256</span>];
+    uint16_t len = <span class="num">0</span>;
+
+    <span class="kw">if</span> (!isotp.sendAndReceive(addr, addr+<span class="num">0x08</span>, req, <span class="num">4</span>, resp, &amp;len))
+      <span class="kw">continue</span>; <span class="cm">// ECU non risponde</span>
+
+    <span class="cm">// Parsing risposta: byte 1=SID+0x40, byte 2=sub, byte 3=status</span>
+    <span class="cm">// poi gruppi di 4 byte: [B3][B2][B1][status]</span>
+    <span class="kw">for</span> (uint16_t i = <span class="num">4</span>; i+<span class="num">3</span> &lt; len; i+=<span class="num">4</span>) {
+      DtcEntry e;
+      parseDtcCode(resp[i], resp[i+<span class="num">1</span>], resp[i+<span class="num">2</span>], e.code);
+      e.status   = resp[i+<span class="num">3</span>];
+      e.ecu_addr = addr;
+      out.push_back(e);
+    }
+  }
+}
+
+<span class="kw">void</span> DtcReader::clearAll() {
+  <span class="kw">for</span> (uint8_t addr : ECU_ADDRS) {
+    <span class="cm">// SID 0x14 = ClearDiagnosticInformation</span>
+    <span class="cm">// 0xFFFFFF = cancella tutti i gruppi DTC</span>
+    uint8_t req[] = {<span class="num">0x04</span>, <span class="num">0x14</span>, <span class="num">0xFF</span>, <span class="num">0xFF</span>, <span class="num">0xFF</span>};
+    isotp.send(addr, req, <span class="num">5</span>);
+    delay(<span class="num">100</span>); <span class="cm">// attesa risposta positiva 0x54</span>
+  }
+}</div>
+      <button onclick="sendPrompt('Scrivi parseDtcCode() completo che converte i 3 byte UDS nel formato P/C/B/U + 4 cifre hex')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Scrivi parseDtcCode() ↗</button>
+    </div>
+
+    <div id="tab-api" class="tc">
+      <div class="code-block"><span class="cm">// web/app/api/dtc/route.ts — riceve DTC da ESP32, arricchisce con DB</span>
+
+<span class="kw">export async function</span> POST(req: NextRequest) {
+  <span class="kw">const</span> { session_id, device_id, dtcs } = await req.json()
+  <span class="cm">// dtcs: [{ code, status_byte, ecu_address, recorded_at }]</span>
+
+  <span class="kw">const</span> supabase = createClient(url, key)
+
+  <span class="cm">// 1. Arricchisci ogni DTC con descrizione dal DB</span>
+  <span class="kw">const</span> codes = dtcs.map((d: <span class="kw">any</span>) => d.code)
+  <span class="kw">const</span> { data: descriptions } = await supabase
+    .from(<span class="st">'dtc'</span>)
+    .select(<span class="st">'code, description_it, severity, system, possible_causes'</span>)
+    .in(<span class="st">'code'</span>, codes)
+
+  <span class="kw">const</span> enriched = dtcs.map((d: <span class="kw">any</span>) => ({
+    ...d,
+    session_id,
+    ...descriptions?.find(x => x.code === d.code),
+    status: parseStatusByte(d.status_byte),
+    <span class="cm">// active = bit 0, pending = bit 5, confirmed = bit 6</span>
+  }))
+
+  <span class="cm">// 2. Insert in Supabase</span>
+  await supabase.from(<span class="st">'dtc_readings'</span>).insert(enriched)
+
+  <span class="cm">// 3. Se DTC critici → trigger analisi Claude</span>
+  <span class="kw">const</span> critical = enriched.filter(d => d.severity === <span class="st">'critical'</span>)
+  <span class="kw">if</span> (critical.length > <span class="num">0</span>) {
+    await fetch(<span class="st">'/api/analyze'</span>, {
+      method: <span class="st">'POST'</span>,
+      body: JSON.stringify({ session_id, dtcs: critical })
+    })
+  }
+
+  <span class="kw">return</span> NextResponse.json({ ok: <span class="kw">true</span>, enriched_count: enriched.length })
+}</div>
+      <button onclick="sendPrompt('Scrivi parseStatusByte() TypeScript che decodifica il byte di stato UDS DTC in flags leggibili')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Scrivi parseStatusByte() ↗</button>
+    </div>
+
+    <div id="tab-db" class="tc">
+      <div class="code-block"><span class="cm">-- supabase/migrations/007_dtc_readings.sql</span>
+
+<span class="kw">CREATE TABLE</span> dtc_readings (
+  id            UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  session_id    UUID <span class="kw">REFERENCES</span> sessions(id) <span class="kw">ON DELETE CASCADE</span>,
+
+  <span class="cm">-- Dati raw dall'ESP32</span>
+  code          TEXT <span class="kw">NOT NULL</span>,       <span class="cm">-- 'P0AA6'</span>
+  status_byte   SMALLINT,             <span class="cm">-- byte raw UDS</span>
+  ecu_address   TEXT,                 <span class="cm">-- '0x7E4'</span>
+  ecu_name      TEXT,                 <span class="cm">-- 'BMS' (da libreria)</span>
+
+  <span class="cm">-- Arricchito dal server</span>
+  description_it TEXT,
+  severity      TEXT,                 <span class="cm">-- 'critical','warning','info'</span>
+  system        TEXT,                 <span class="cm">-- 'battery','motor','charging'</span>
+  possible_causes TEXT[],
+
+  <span class="cm">-- Flags decodificate da status_byte</span>
+  is_active     BOOLEAN <span class="kw">DEFAULT</span> false,
+  is_pending    BOOLEAN <span class="kw">DEFAULT</span> false,
+  is_confirmed  BOOLEAN <span class="kw">DEFAULT</span> false,
+  is_cleared    BOOLEAN <span class="kw">DEFAULT</span> false,
+
+  <span class="cm">-- AI</span>
+  ai_analysis   TEXT,                 <span class="cm">-- output Claude</span>
+
+  recorded_at   TIMESTAMPTZ <span class="kw">DEFAULT NOW</span>(),
+  cleared_at    TIMESTAMPTZ
+);
+
+<span class="cm">-- Vista comoda per la dashboard</span>
+<span class="kw">CREATE VIEW</span> active_dtcs <span class="kw">AS</span>
+  <span class="kw">SELECT</span> * <span class="kw">FROM</span> dtc_readings
+  <span class="kw">WHERE</span> is_active = <span class="kw">true</span> <span class="kw">AND</span> cleared_at <span class="kw">IS NULL</span>
+  <span class="kw">ORDER BY</span>
+    <span class="kw">CASE</span> severity
+      <span class="kw">WHEN</span> <span class="st">'critical'</span> <span class="kw">THEN</span> <span class="num">1</span>
+      <span class="kw">WHEN</span> <span class="st">'warning'</span>  <span class="kw">THEN</span> <span class="num">2</span>
+      <span class="kw">ELSE</span> <span class="num">3</span>
+    <span class="kw">END</span>, recorded_at <span class="kw">DESC</span>;
+
+<span class="cm">-- Realtime per notifiche live</span>
+<span class="kw">ALTER TABLE</span> dtc_readings <span class="kw">REPLICA IDENTITY FULL</span>;
+<span class="kw">SELECT</span> supabase_realtime.enable_realtime(<span class="st">'dtc_readings'</span>);</div>
+      <button onclick="sendPrompt('Come fare una query Supabase per trovare i DTC che si ripresentano più spesso nelle ultime 10 sessioni?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Query trend DTC ↗</button>
+    </div>
+
+    <div id="tab-claude" class="tc">
+      <div class="code-block"><span class="cm">// web/app/api/analyze/route.ts — Claude analizza i DTC in italiano</span>
+
+<span class="kw">const</span> SYSTEM = <span class="st">`Sei un esperto diagnostico di veicoli elettrici.
+Ricevi DTC letti via UDS da ESP32. Rispondi SOLO in JSON:
+{
+  "summary": "frase breve stato generale",
+  "dtcs": [{
+    "code": "P0AA6",
+    "spiegazione": "cosa significa in italiano semplice",
+    "urgenza": "immediata|entro_settimana|monitorare",
+    "cause_probabili": ["causa 1", "causa 2"],
+    "azione": "cosa fare concretamente"
+  }],
+  "raccomandazione_generale": "..."
+}`</span>
+
+<span class="kw">export async function</span> POST(req: NextRequest) {
+  <span class="kw">const</span> { session_id, dtcs, vehicle } = await req.json()
+
+  <span class="kw">const</span> response = await fetch(<span class="st">'https://api.anthropic.com/v1/messages'</span>, {
+    method: <span class="st">'POST'</span>,
+    headers: {
+      <span class="st">'x-api-key'</span>: process.env.ANTHROPIC_API_KEY!,
+      <span class="st">'anthropic-version'</span>: <span class="st">'2023-06-01'</span>,
+      <span class="st">'content-type'</span>: <span class="st">'application/json'</span>
+    },
+    body: JSON.stringify({
+      model: <span class="st">'claude-sonnet-4-20250514'</span>,
+      max_tokens: <span class="num">1000</span>,
+      system: SYSTEM,
+      messages: [{
+        role: <span class="st">'user'</span>,
+        content: <span class="st">`Veicolo: ${vehicle.make} ${vehicle.model} ${vehicle.year}
+DTC rilevati: ${JSON.stringify(dtcs, null, 2)}`</span>
+      }]
+    })
+  })
+
+  <span class="kw">const</span> data = await response.json()
+  <span class="kw">const</span> analysis = JSON.parse(data.content[<span class="num">0</span>].text)
+
+  <span class="cm">// Salva analisi in Supabase</span>
+  await supabase.from(<span class="st">'sessions'</span>)
+    .update({ ai_diagnosis: analysis })
+    .eq(<span class="st">'id'</span>, session_id)
+
+  <span class="kw">return</span> NextResponse.json(analysis)
+}</div>
+      <button onclick="sendPrompt('Come fare streaming della risposta Claude API alla dashboard Next.js in tempo reale mentre analizza i DTC?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Streaming Claude ↗</button>
+    </div>
+
+    <div id="tab-flow" class="tc">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">ESP32 scansiona tutte le ECU <span class="step-tag">UDS SID 0x19</span></div>
+          <div class="step-desc">Loop su 6–11 indirizzi ECU (da JSON libreria). Ogni ECU: SID 0x19 sub 0x02 mask 0xFF. Risposta analizzata in gruppi da 4 byte. Timeout 200ms per ECU.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">Parsing codici <span class="step-tag">ISO 15031-6</span></div>
+          <div class="step-desc">Byte 1 bit 7-6 → tipo (P/C/B/U). Bit 5-4 → categoria. Byte 2-3 → 4 cifre hex. Status byte → flags active/pending/confirmed.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">POST a /api/dtc <span class="step-tag">Vercel Edge</span></div>
+          <div class="step-desc">Array JSON con codici raw + ecu_address + status_byte. Server arricchisce con descrizioni da tabella dtc in Supabase.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">4</div>
+        <div>
+          <div class="step-title">Insert + Realtime <span class="step-tag">Supabase</span></div>
+          <div class="step-desc">Righe inserite in dtc_readings. Supabase notifica dashboard via WebSocket. Se severity=critical → trigger automatico Claude API.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div>
+          <div class="step-title">Analisi Claude → Supabase <span class="step-tag">JSON strutturato</span></div>
+          <div class="step-desc">Claude risponde in JSON con spiegazione, urgenza e azioni per ogni DTC. Salvato in sessions.ai_diagnosis. Dashboard mostra live.</div>
+        </div>
+      </div>
+      <button onclick="sendPrompt('Scrivi il hook React useDTCRealtime con Supabase per aggiornare lista DTC live quando ESP32 invia nuovi errori')" style="margin-top:12px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Scrivi hook React ↗</button>
+      </div>
+  </div>
+
+</div>
+
+<script>
+const DTCS = [
+  { code:'P0AA6', name:'Isolamento batteria HV degradato', ecu:'BMS', ecu_addr:'0x7E4', sev:'critical', status:'Attivo · Confermato', causes:'Cablaggio HV, connettori massa, umidità vano batteria', action:'Evitare ricarica DC rapida · Verifica connettori HV entro 500 km', system:'Alta tensione', type:'active' },
+  { code:'U0100', name:'Perdita comunicazione ECM/PCM', ecu:'BCM', ecu_addr:'0x7A0', sev:'warning', status:'Attivo · Intermittente', causes:'Connettore allentato JP12, cablaggio CAN bus', action:'Verificare connettori sotto cruscotto lato guida', system:'Rete CAN', type:'active' },
+  { code:'P0B1D', name:'Temperatura modulo batteria fuori range', ecu:'BMS', ecu_addr:'0x7E4', sev:'warning', status:'In sospeso · 2 occorrenze', causes:'Sensore NTC modulo 3, raffreddamento parzialmente ostruito', action:'Monitorare · Pulire sistema raffreddamento', system:'Termico', type:'pending' },
+  { code:'P0C73', name:'Potenza motore limitata — protezione termica', ecu:'MCU', ecu_addr:'0x7E0', sev:'info', status:'In sospeso · Ultima 3 giorni fa', causes:'Guida sportiva prolungata in caldo, normale per protezione', action:'Nessuna azione richiesta', system:'Motore', type:'pending' },
+  { code:'C1234', name:'Sensore pressione pneumatico — anteriore SX', ecu:'ABS', ecu_addr:'0x760', sev:'info', status:'In sospeso · Stagionale', causes:'Variazione temperatura, pressione sotto soglia 2.1 bar', action:'Verificare pressione pneumatici', system:'Sicurezza', type:'pending' },
+];
+
+const SEV = {
+  critical: { badge:'br', bar:'#E24B4A', codeBg:'#FCEBEB', codeFg:'#A32D2D' },
+  warning:  { badge:'ba', bar:'#EF9F27', codeBg:'#FAEEDA', codeFg:'#854F0B' },
+  info:     { badge:'bb', bar:'#378ADD', codeBg:'#E6F1FB', codeFg:'#185FA5' },
+};
+
+let currentFilter = 'all';
+let expanded = null;
+
+function renderDTCList(filter) {
+  const list = document.getElementById('dtc-list');
+  const items = filter === 'all' ? DTCS :
+    filter === 'active' ? DTCS.filter(d=>d.type==='active') :
+    filter === 'pending' ? DTCS.filter(d=>d.type==='pending') : [];
+
+  list.innerHTML = items.map((d,i) => {
+    const s = SEV[d.sev];
+    return `<div class="dtc-item" id="dtc-${i}" onclick="toggleDTC(${i})">
+      <div class="dtc-head">
+        <div class="dtc-sev" style="background:${s.bar}"></div>
+        <span class="dtc-code" style="background:${s.codeBg};color:${s.codeFg}">${d.code}</span>
+        <div class="dtc-body">
+          <div class="dtc-name">${d.name}</div>
+          <div class="dtc-meta">${d.ecu} · ${d.ecu_addr} · ${d.status}</div>
+        </div>
+        <span class="badge ${s.badge}">${d.sev==='critical'?'Critico':d.sev==='warning'?'Avviso':'Info'}</span>
+      </div>
+      <div class="dtc-expand">
+        <div class="dtc-expand-inner">
+          <div class="expand-block">
+            <div class="expand-label">Cause probabili</div>
+            <div class="expand-val">${d.causes}</div>
+          </div>
+          <div class="expand-block">
+            <div class="expand-label">Azione consigliata</div>
+            <div class="expand-val">${d.action}</div>
+          </div>
+          <div class="expand-block">
+            <div class="expand-label">Sistema</div>
+            <div class="expand-val">${d.system}</div>
+          </div>
+          <div class="expand-block">
+            <div class="expand-label">ECU address</div>
+            <div class="expand-val" style="font-family:var(--font-mono)">${d.ecu_addr} → ${String.fromCharCode(parseInt(d.ecu_addr)+8).charCodeAt(0).toString(16).padStart(3,'0')} (risposta)</div>
+          </div>
+        </div>
+        <button onclick="event.stopPropagation();sendPrompt('Cosa significa esattamente ${d.code} su una Renault Zoe e come si risolve passo per passo?')" 
+          style="margin-top:8px;font-size:11px;padding:5px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">
+          Analisi dettagliata AI ↗
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleDTC(i) {
+  const el = document.getElementById('dtc-'+i);
+  if (!el) return;
+  const wasOpen = el.classList.contains('expanded');
+  document.querySelectorAll('.dtc-item').forEach(x=>x.classList.remove('expanded'));
+  if (!wasOpen) el.classList.add('expanded');
+}
+
+function filterDTC(btn, filter) {
+  document.querySelectorAll('.tab-row .tab').forEach(t=>t.classList.remove('on'));
+  btn.classList.add('on');
+  currentFilter = filter;
+  renderDTCList(filter);
+}
+
+const ECUS = [
+  { addr:'0x7E4', name:'BMS — Batteria', dot:'#E24B4A', count:'2 DTC' },
+  { addr:'0x7A0', name:'BCM — Body', dot:'#EF9F27', count:'1 DTC' },
+  { addr:'0x7E0', name:'MCU — Motore', dot:'#EF9F27', count:'1 DTC' },
+  { addr:'0x760', name:'ABS/ESP', dot:'#378ADD', count:'1 DTC' },
+  { addr:'0x744', name:'OBC — Caricatore', dot:'#1D9E75', count:'OK' },
+  { addr:'0x77E', name:'HVAC — Clima', dot:'#1D9E75', count:'OK' },
+];
+
+function renderECU() {
+  document.getElementById('ecu-list').innerHTML = ECUS.map(e=>`
+    <div class="ecu-row" style="cursor:pointer" onclick="sendPrompt('Come leggere i DTC dall ECU ${e.name} (indirizzo ${e.addr}) con UDS su ESP32?')"
+      onmouseenter="this.style.background='var(--color-background-secondary)'"
+      onmouseleave="this.style.background=''">
+      <div class="ecu-dot" style="background:${e.dot}"></div>
+      <span class="ecu-addr">${e.addr}</span>
+      <span class="ecu-name">${e.name}</span>
+      <span class="ecu-count">${e.count}</span>
+    </div>`).join('');
+}
+
+let scanning = false;
+function startScan() {
+  if (scanning) return;
+  scanning = true;
+  const btn = document.getElementById('scan-btn');
+  const prog = document.getElementById('scan-progress');
+  const pbar = document.getElementById('pbar');
+  const status = document.getElementById('scan-status');
+  btn.textContent = 'Scansione…';
+  btn.disabled = true;
+  prog.style.display = 'block';
+  let step = 0;
+  const steps = ECUS.map(e=>`Interrogando ${e.addr} (${e.name.split('—')[0].trim()})…`);
+  const iv = setInterval(()=>{
+    if (step >= steps.length) {
+      clearInterval(iv);
+      prog.style.display = 'none';
+      btn.textContent = 'Nuova scansione';
+      btn.disabled = false;
+      scanning = false;
+      renderDTCList(currentFilter);
+      return;
+    }
+    status.textContent = steps[step];
+    pbar.style.width = Math.round((step+1)/steps.length*100)+'%';
+    step++;
+  }, 350);
+}
+
+function confirmClear() {
+  sendPrompt('Come funziona la cancellazione DTC con UDS SID 0x14 su tutte le ECU in parallelo con ESP32? Ci sono rischi?');
+}
+
+function sw(btn, id) {
+  document.querySelectorAll('.tab-row:last-of-type .tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('on');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+renderDTCList('all');
+renderECU();
+</script>

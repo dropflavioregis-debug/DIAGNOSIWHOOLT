@@ -1,0 +1,732 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{font-family:var(--font-sans);display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.row{display:grid;gap:12px}
+.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.r2{grid-template-columns:1fr 1fr}
+.r3{grid-template-columns:1fr 1fr 1fr}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px}
+.mlabel{font-size:11px;color:var(--color-text-secondary);margin-bottom:5px}
+.mval{font-size:20px;font-weight:500;color:var(--color-text-primary);line-height:1}
+.msub{font-size:11px;color:var(--color-text-tertiary);margin-top:3px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.ctitle{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.bg{background:#EAF3DE;color:#3B6D11}.bb{background:#E6F1FB;color:#185FA5}
+.ba{background:#FAEEDA;color:#854F0B}.br{background:#FCEBEB;color:#A32D2D}
+.bgr{background:#F1EFE8;color:#444441}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.tab-row{display:flex;gap:2px;margin-bottom:14px;flex-wrap:wrap}
+.tab{padding:5px 11px;font-size:12px;border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-secondary);border:none;background:transparent;transition:all .12s}
+.tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
+.tc{display:none}.tc.active{display:block}
+.code-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary);line-height:1.7;overflow-x:auto;white-space:pre}
+.kw{color:#185FA5}.cm{color:var(--color-text-tertiary)}.st{color:#3B6D11}.num{color:#854F0B}
+.field-group{display:flex;flex-direction:column;gap:10px;margin-bottom:16px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.field label{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.field .hint{font-size:11px;color:var(--color-text-tertiary)}
+.field input,.field select{padding:8px 11px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);width:100%}
+.field input:focus,.field select:focus{outline:none;border-color:var(--color-border-primary)}
+.field input.saved{border-color:#1D9E75}
+.toggle-wrap{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.toggle-wrap:last-child{border:none}
+.toggle-label{font-size:12px;color:var(--color-text-primary)}
+.toggle-hint{font-size:11px;color:var(--color-text-tertiary)}
+.toggle-track{position:relative;width:36px;height:20px;border-radius:10px;background:var(--color-border-secondary);transition:background .2s;cursor:pointer;flex-shrink:0}
+.toggle-track.on{background:#1D9E75}
+.toggle-thumb{position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;transition:transform .2s}
+.toggle-track.on .toggle-thumb{transform:translateX(16px)}
+.save-btn{padding:8px 18px;font-size:12px;font-weight:500;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-primary);cursor:pointer;transition:all .12s}
+.save-btn:hover{background:var(--color-background-secondary)}
+.save-btn.primary{background:#1D9E75;border-color:#1D9E75;color:#fff}
+.save-btn.primary:hover{background:#0F6E56}
+.save-btn.danger{border-color:var(--color-border-danger);color:var(--color-text-danger)}
+.diag-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.diag-item:last-child{border:none}
+.diag-icon{width:28px;height:28px;border-radius:var(--border-radius-md);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.diag-name{font-size:12px;font-weight:500;color:var(--color-text-primary);flex:1}
+.diag-val{font-size:12px;color:var(--color-text-secondary)}
+.diag-status{font-size:11px;padding:2px 8px;border-radius:10px}
+.log-wrap{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:10px 12px;font-family:var(--font-mono);font-size:11px;line-height:1.8;max-height:180px;overflow-y:auto}
+.log-line{display:flex;gap:8px}
+.log-time{color:var(--color-text-tertiary);flex-shrink:0}
+.log-ok{color:#1D9E75}.log-warn{color:#854F0B}.log-err{color:#A32D2D}.log-info{color:#185FA5}
+.captive-frame{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:24px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.captive-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:20px;width:100%;max-width:340px}
+.captive-title{font-size:14px;font-weight:500;color:var(--color-text-primary);text-align:center;margin-bottom:16px}
+.captive-logo{width:40px;height:40px;border-radius:var(--border-radius-lg);background:#EAF3DE;display:flex;align-items:center;justify-content:center;margin:0 auto 8px}
+.ota-step{display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.ota-step:last-child{border:none}
+.ota-num{width:22px;height:22px;border-radius:50%;background:var(--color-background-info);color:var(--color-text-info);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.prog-wrap{height:4px;background:var(--color-border-tertiary);border-radius:2px;overflow:hidden}
+.prog{height:100%;border-radius:2px;transition:width .5s}
+.pin-table{width:100%;border-collapse:collapse}
+.pin-table td,.pin-table th{padding:6px 10px;font-size:11px;border-bottom:0.5px solid var(--color-border-tertiary);text-align:left}
+.pin-table th{color:var(--color-text-tertiary);font-weight:400}
+.pin-table td:first-child{font-family:var(--font-mono);color:var(--color-text-info)}
+.pulse{width:7px;height:7px;border-radius:50%;background:#1D9E75;animation:pulse 2s infinite;display:inline-block}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+</style>
+
+<div class="wrap">
+
+  <div class="row r4">
+    <div class="metric">
+      <div class="mlabel">Dispositivo</div>
+      <div class="mval" style="font-size:15px;padding-top:3px">EV-Diag-01</div>
+      <div class="msub">ESP32-S3 · fw v1.4.2</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Stato connessione</div>
+      <div class="mval" style="font-size:13px;padding-top:4px;color:#1D9E75">
+        <span class="pulse"></span> WiFi OK
+      </div>
+      <div class="msub">Casa-WiFi · -62 dBm</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Uptime</div>
+      <div class="mval">14<span style="font-size:14px;color:var(--color-text-secondary)">h</span></div>
+      <div class="msub">Riavvio: ieri 07:22</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Memoria libera</div>
+      <div class="mval">186<span style="font-size:14px;color:var(--color-text-secondary)">KB</span></div>
+      <div class="msub">SPIFFS: 1.8/4MB usati</div>
+    </div>
+  </div>
+
+  <div class="row r2">
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">Configurazione WiFi e server</span>
+        <span class="badge bg"><span class="bdot"></span>NVS salvato</span>
+      </div>
+      <div class="field-group">
+        <div class="field-row">
+          <div class="field">
+            <label>Nome rete WiFi (SSID)</label>
+            <input id="f-ssid" type="text" value="Casa-WiFi" oninput="markDirty('f-ssid')">
+          </div>
+          <div class="field">
+            <label>Password WiFi</label>
+            <input id="f-pass" type="password" value="••••••••••" oninput="markDirty('f-pass')">
+          </div>
+        </div>
+        <div class="field">
+          <label>URL server Vercel</label>
+          <input id="f-url" type="text" value="https://ev-diagnostic.vercel.app" oninput="markDirty('f-url')">
+          <span class="hint">Endpoint base — senza / finale</span>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>API Key dispositivo</label>
+            <input id="f-apikey" type="password" value="evd_••••••••••••••••" oninput="markDirty('f-apikey')">
+          </div>
+          <div class="field">
+            <label>Nome dispositivo</label>
+            <input id="f-name" type="text" value="EV-Diag-01" oninput="markDirty('f-name')">
+          </div>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="save-btn primary" onclick="saveConfig()">Salva su ESP32</button>
+        <button class="save-btn" onclick="sendPrompt('Come inviare la configurazione WiFi e server a ESP32 via OTA senza riflashare il firmware?')">Test connessione ↗</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">Parametri CAN e diagnostica</span>
+      </div>
+      <div class="field-group">
+        <div class="field-row">
+          <div class="field">
+            <label>Velocità CAN bus</label>
+            <select id="f-can">
+              <option value="500" selected>500 kbps (standard)</option>
+              <option value="250">250 kbps</option>
+              <option value="1000">1 Mbps</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Intervallo lettura</label>
+            <select id="f-interval">
+              <option value="500">500 ms</option>
+              <option value="1000" selected>1 secondo</option>
+              <option value="2000">2 secondi</option>
+              <option value="5000">5 secondi</option>
+            </select>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label>GPIO CAN TX</label>
+            <input type="number" value="17" min="0" max="48">
+            <span class="hint">SN65HVD230 TXD</span>
+          </div>
+          <div class="field">
+            <label>GPIO CAN RX</label>
+            <input type="number" value="18" min="0" max="48">
+            <span class="hint">SN65HVD230 RXD</span>
+          </div>
+        </div>
+      </div>
+      <div style="border-top:0.5px solid var(--color-border-tertiary);padding-top:12px">
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Auto-detect veicolo</div><div class="toggle-hint">Fingerprint CAN al boot</div></div>
+          <div class="toggle-track on" onclick="toggleSwitch(this)"><div class="toggle-thumb"></div></div>
+        </div>
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Cache librerie in SPIFFS</div><div class="toggle-hint">Evita download ad ogni boot</div></div>
+          <div class="toggle-track on" onclick="toggleSwitch(this)"><div class="toggle-thumb"></div></div>
+        </div>
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Buffer offline</div><div class="toggle-hint">Salva dati senza WiFi</div></div>
+          <div class="toggle-track on" onclick="toggleSwitch(this)"><div class="toggle-thumb"></div></div>
+        </div>
+        <div class="toggle-wrap">
+          <div><div class="toggle-label">Debug seriale</div><div class="toggle-hint">Log verbose su UART0</div></div>
+          <div class="toggle-track" onclick="toggleSwitch(this)"><div class="toggle-thumb"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row r3">
+    <div class="card">
+      <div class="ch"><span class="ctitle">Diagnostica hardware</span></div>
+      <div class="diag-item">
+        <div class="diag-icon" style="background:#EAF3DE">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="4" width="10" height="6" rx="1" stroke="#3B6D11" stroke-width="1.2"/><path d="M11 6v2" stroke="#3B6D11" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <span class="diag-name">CAN Bus (TWAI)</span>
+        <span class="diag-val">TX:17 RX:18</span>
+        <span class="diag-status" style="background:#EAF3DE;color:#3B6D11">OK</span>
+      </div>
+      <div class="diag-item">
+        <div class="diag-icon" style="background:#E6F1FB">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7a5 5 0 0110 0" stroke="#185FA5" stroke-width="1.2" stroke-linecap="round"/><path d="M4 9a3 3 0 016 0" stroke="#185FA5" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="11" r="1" fill="#185FA5"/></svg>
+        </div>
+        <span class="diag-name">WiFi (RSSI)</span>
+        <span class="diag-val">−62 dBm</span>
+        <span class="diag-status" style="background:#EAF3DE;color:#3B6D11">Buono</span>
+      </div>
+      <div class="diag-item">
+        <div class="diag-icon" style="background:#EAF3DE">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="3" width="10" height="8" rx="1" stroke="#3B6D11" stroke-width="1.2"/><path d="M5 3V2M9 3V2" stroke="#3B6D11" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </div>
+        <span class="diag-name">SPIFFS</span>
+        <span class="diag-val">1.8 / 4 MB</span>
+        <span class="diag-status" style="background:#EAF3DE;color:#3B6D11">OK</span>
+      </div>
+      <div class="diag-item">
+        <div class="diag-icon" style="background:#EAF3DE">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="2" y="2" width="10" height="10" rx="2" stroke="#3B6D11" stroke-width="1.2"/><path d="M5 7h4M7 5v4" stroke="#3B6D11" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </div>
+        <span class="diag-name">Heap libero</span>
+        <span class="diag-val">186 KB</span>
+        <span class="diag-status" style="background:#EAF3DE;color:#3B6D11">OK</span>
+      </div>
+      <div class="diag-item">
+        <div class="diag-icon" style="background:#FAEEDA">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="5" stroke="#854F0B" stroke-width="1.2"/><path d="M7 4v3l2 1" stroke="#854F0B" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </div>
+        <span class="diag-name">NTP / Orario</span>
+        <span class="diag-val">sync 2m fa</span>
+        <span class="diag-status" style="background:#FAEEDA;color:#854F0B">Lento</span>
+      </div>
+      <div class="diag-item">
+        <div class="diag-icon" style="background:#EAF3DE">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 2v2M7 10v2M2 7h2M10 7h2" stroke="#3B6D11" stroke-width="1.2" stroke-linecap="round"/><circle cx="7" cy="7" r="2.5" stroke="#3B6D11" stroke-width="1.2"/></svg>
+        </div>
+        <span class="diag-name">Server Vercel</span>
+        <span class="diag-val">48 ms ping</span>
+        <span class="diag-status" style="background:#EAF3DE;color:#3B6D11">Online</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">Log seriale live</span>
+        <button onclick="sendPrompt('Come implementare il log seriale remoto su ESP32 che invia i log via WebSocket alla dashboard?')" style="font-size:11px;padding:3px 9px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Log remoto ↗</button>
+      </div>
+      <div class="log-wrap" id="log-wrap"></div>
+      <div style="display:flex;gap:6px;margin-top:10px">
+        <button onclick="clearLog()" style="font-size:11px;padding:5px 11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Pulisci</button>
+        <button onclick="addFakeLogs()" style="font-size:11px;padding:5px 11px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Simula log</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ctitle">Pinout ESP32-S3</span></div>
+      <table class="pin-table">
+        <tr><th>GPIO</th><th>Funzione</th><th>Connessione</th></tr>
+        <tr><td>GPIO17</td><td>CAN TX</td><td>SN65HVD230 TXD</td></tr>
+        <tr><td>GPIO18</td><td>CAN RX</td><td>SN65HVD230 RXD</td></tr>
+        <tr><td>3.3V</td><td>VCC</td><td>SN65HVD230 VCC</td></tr>
+        <tr><td>GND</td><td>GND</td><td>SN65HVD230 GND</td></tr>
+        <tr><td>OBD2 pin6</td><td>CAN-H</td><td>SN65HVD230 CANH</td></tr>
+        <tr><td>OBD2 pin14</td><td>CAN-L</td><td>SN65HVD230 CANL</td></tr>
+        <tr><td>OBD2 pin16</td><td>+12V</td><td>DC-DC → 3.3V ESP32</td></tr>
+      </table>
+      <button onclick="sendPrompt('Mostrami lo schema KiCad completo del PCB per ESP32-S3 con SN65HVD230 e connettore OBD2')" style="margin-top:10px;width:100%;font-size:11px;padding:6px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Schema KiCad ↗</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ctitle">Implementazione</span></div>
+    <div class="tab-row">
+      <button class="tab on" onclick="sw(this,'captive')">Captive portal</button>
+      <button class="tab" onclick="sw(this,'nvs')">NVS config</button>
+      <button class="tab" onclick="sw(this,'ota')">OTA update</button>
+      <button class="tab" onclick="sw(this,'supabase')">Supabase device</button>
+      <button class="tab" onclick="sw(this,'wiring')">Wiring C++</button>
+    </div>
+
+    <div id="tab-captive" class="tc active">
+      <div class="row r2" style="margin-bottom:14px">
+        <div>
+          <div class="code-block"><span class="cm">// firmware/src/wifi/captive_portal.cpp</span>
+<span class="cm">// Se no WiFi salvato → crea hotspot "EV-Diagnostic-XXXX"</span>
+<span class="cm">// Utente si connette e apre 192.168.4.1</span>
+
+<span class="kw">#include</span> <span class="st">&lt;WiFi.h&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;WebServer.h&gt;</span>
+<span class="kw">#include</span> <span class="st">&lt;DNSServer.h&gt;</span>
+
+WebServer server(<span class="num">80</span>);
+DNSServer dns;
+
+<span class="kw">void</span> startCaptivePortal() {
+  String ssid = <span class="st">"EV-Diagnostic-"</span>
+    + String((<span class="kw">uint32_t</span>)ESP.getEfuseMac(), HEX).substring(<span class="num">0</span>,<span class="num">4</span>);
+  WiFi.softAP(ssid.c_str());
+  dns.start(<span class="num">53</span>, <span class="st">"*"</span>, WiFi.softAPIP());
+
+  server.on(<span class="st">"/"</span>, []() {
+    server.send(<span class="num">200</span>, <span class="st">"text/html"</span>, PORTAL_HTML);
+  });
+
+  server.on(<span class="st">"/save"</span>, HTTP_POST, []() {
+    String ssid = server.arg(<span class="st">"ssid"</span>);
+    String pass = server.arg(<span class="st">"pass"</span>);
+    String url  = server.arg(<span class="st">"url"</span>);
+    String key  = server.arg(<span class="st">"key"</span>);
+    String name = server.arg(<span class="st">"name"</span>);
+
+    <span class="cm">// Salva tutto in NVS (persiste ai riavvii)</span>
+    nvs.set(<span class="st">"wifi_ssid"</span>, ssid);
+    nvs.set(<span class="st">"wifi_pass"</span>, pass);
+    nvs.set(<span class="st">"server_url"</span>, url);
+    nvs.set(<span class="st">"api_key"</span>,    key);
+    nvs.set(<span class="st">"device_name"</span>,name);
+
+    server.send(<span class="num">200</span>, <span class="st">"text/html"</span>,
+      <span class="st">"&lt;h2&gt;Salvato! Riavvio in corso...&lt;/h2&gt;"</span>);
+    delay(<span class="num">1500</span>);
+    ESP.restart();
+  });
+
+  server.onNotFound([]() {
+    server.sendHeader(<span class="st">"Location"</span>, <span class="st">"http://192.168.4.1"</span>);
+    server.send(<span class="num">302</span>);
+  });
+
+  server.begin();
+  <span class="kw">while</span>(<span class="kw">true</span>) { dns.processNextRequest(); server.handleClient(); }
+}</span></div>
+          <button onclick="sendPrompt('Scrivi il PORTAL_HTML completo del captive portal ESP32 con form WiFi, server URL, API key e nome dispositivo, stile minimal mobile-friendly')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Scrivi PORTAL_HTML ↗</button>
+        </div>
+        <div>
+          <div class="captive-frame">
+            <div style="font-size:11px;color:var(--color-text-tertiary);text-align:center">Anteprima captive portal<br>192.168.4.1</div>
+            <div class="captive-card">
+              <div class="captive-logo">
+                <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="3" y="8" width="14" height="9" rx="2" stroke="#3B6D11" stroke-width="1.3"/><path d="M7 8V6a3 3 0 016 0v2" stroke="#3B6D11" stroke-width="1.3" stroke-linecap="round"/><circle cx="10" cy="12.5" r="1.5" fill="#3B6D11"/></svg>
+              </div>
+              <div class="captive-title">EV Diagnostic Setup</div>
+              <div class="field" style="margin-bottom:8px">
+                <label style="font-size:11px">Nome rete WiFi</label>
+                <input type="text" placeholder="Casa-WiFi" style="font-size:12px;padding:7px 10px">
+              </div>
+              <div class="field" style="margin-bottom:8px">
+                <label style="font-size:11px">Password WiFi</label>
+                <input type="password" placeholder="••••••••" style="font-size:12px;padding:7px 10px">
+              </div>
+              <div class="field" style="margin-bottom:8px">
+                <label style="font-size:11px">URL server</label>
+                <input type="text" placeholder="https://..." style="font-size:12px;padding:7px 10px">
+              </div>
+              <div class="field" style="margin-bottom:12px">
+                <label style="font-size:11px">API Key</label>
+                <input type="password" placeholder="evd_..." style="font-size:12px;padding:7px 10px">
+              </div>
+              <button onclick="sendPrompt('Come migliorare il captive portal con scan WiFi automatico e dropdown delle reti disponibili?')" style="width:100%;padding:9px;font-size:12px;font-weight:500;border:none;border-radius:var(--border-radius-md);background:#1D9E75;color:#fff;cursor:pointer">Salva e connetti</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-nvs" class="tc">
+      <div class="code-block"><span class="cm">// firmware/src/config/nvs_config.cpp</span>
+<span class="cm">// NVS = Non-Volatile Storage — persiste in flash anche dopo spegnimento</span>
+<span class="cm">// Namespace "ev_cfg" per isolare le chiavi del progetto</span>
+
+<span class="kw">#include</span> <span class="st">"nvs_config.h"</span>
+<span class="kw">#include</span> <span class="st">&lt;Preferences.h&gt;</span>
+
+Preferences prefs;
+
+<span class="kw">void</span> NvsConfig::begin() {
+  prefs.begin(<span class="st">"ev_cfg"</span>, <span class="kw">false</span>); <span class="cm">// false = read+write</span>
+}
+
+String NvsConfig::get(<span class="kw">const</span> String& key, <span class="kw">const</span> String& def) {
+  <span class="kw">return</span> prefs.getString(key.c_str(), def);
+}
+
+<span class="kw">void</span> NvsConfig::set(<span class="kw">const</span> String& key, <span class="kw">const</span> String& val) {
+  prefs.putString(key.c_str(), val.c_str());
+}
+
+<span class="kw">bool</span> NvsConfig::isConfigured() {
+  <span class="kw">return</span> prefs.getString(<span class="st">"wifi_ssid"</span>, <span class="st">""</span>).length() > <span class="num">0</span>;
+}
+
+<span class="kw">void</span> NvsConfig::reset() {
+  prefs.clear();  <span class="cm">// cancella tutto il namespace</span>
+}
+
+<span class="cm">// Chiavi salvate in NVS:
+// "wifi_ssid"   → nome rete
+// "wifi_pass"   → password
+// "server_url"  → https://ev-diagnostic.vercel.app
+// "api_key"     → evd_xxxxxxxxxxxxxxxx
+// "device_name" → EV-Diag-01
+// "device_id"   → uuid generato al primo boot
+// "vehicle_id"  → slug auto rilevata (cache)
+// "can_speed"   → 500 (kbps)
+// "read_ms"     → 1000 (intervallo lettura)
+// "debug"       → 0/1</span>
+
+<span class="cm">// main.cpp — logica avvio</span>
+<span class="kw">void</span> setup() {
+  nvs.begin();
+
+  <span class="kw">if</span> (!nvs.isConfigured()) {
+    Serial.println(<span class="st">"[BOOT] Nessuna config — avvio captive portal"</span>);
+    startCaptivePortal();   <span class="cm">// bloccante finché non si salva</span>
+  }
+
+  <span class="kw">if</span> (!connectWiFi(nvs.get(<span class="st">"wifi_ssid"</span>), nvs.get(<span class="st">"wifi_pass"</span>))) {
+    Serial.println(<span class="st">"[BOOT] WiFi fallito — modalità offline"</span>);
+    offlineMode = <span class="kw">true</span>;
+  }
+
+  canBus.begin(nvs.get(<span class="st">"can_speed"</span>).toInt());
+  vehicleDetector.detect();
+  sessionManager.init();
+}</div>
+      <button onclick="sendPrompt('Come aggiungere un pulsante fisico sul PCB per resettare le impostazioni NVS di ESP32 e riavviare il captive portal?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Reset via pulsante fisico ↗</button>
+    </div>
+
+    <div id="tab-ota" class="tc">
+      <div class="row r2">
+        <div class="code-block"><span class="cm">// firmware/src/ota/ota_updater.cpp</span>
+<span class="cm">// OTA: ESP32 scarica nuovo firmware da Vercel</span>
+<span class="cm">// Controllato ogni 24h o su richiesta dalla dashboard</span>
+
+<span class="kw">#include</span> <span class="st">&lt;HTTPUpdate.h&gt;</span>
+
+<span class="kw">void</span> OtaUpdater::checkAndUpdate() {
+  <span class="cm">// 1. Chiedi al server se c'è una versione nuova</span>
+  HTTPClient http;
+  http.begin(nvs.get(<span class="st">"server_url"</span>) + <span class="st">"/api/firmware/latest"</span>);
+  http.addHeader(<span class="st">"X-Device-ID"</span>, nvs.get(<span class="st">"device_id"</span>));
+  http.addHeader(<span class="st">"X-FW-Version"</span>, FIRMWARE_VERSION);
+  http.GET();
+
+  String body = http.getString();
+  DynamicJsonDocument doc(<span class="num">256</span>);
+  deserializeJson(doc, body);
+
+  <span class="kw">if</span> (!doc[<span class="st">"update_available"</span>].as&lt;<span class="kw">bool</span>&gt;()) {
+    Serial.println(<span class="st">"[OTA] Firmware aggiornato"</span>);
+    <span class="kw">return</span>;
+  }
+
+  String bin_url = doc[<span class="st">"url"</span>].as&lt;String&gt;();
+  Serial.printf(<span class="st">"[OTA] Download %s\n"</span>, bin_url.c_str());
+
+  <span class="cm">// 2. Scarica e flasha in background (partition alternata)</span>
+  WiFiClient client;
+  t_httpUpdate_return ret = httpUpdate.update(client, bin_url);
+
+  <span class="kw">switch</span>(ret) {
+    <span class="kw">case</span> HTTP_UPDATE_OK:
+      Serial.println(<span class="st">"[OTA] OK — riavvio"</span>);
+      ESP.restart(); <span class="kw">break</span>;
+    <span class="kw">case</span> HTTP_UPDATE_FAILED:
+      Serial.printf(<span class="st">"[OTA] Errore: %s\n"</span>,
+        httpUpdate.getLastErrorString().c_str());
+      <span class="kw">break</span>;
+  }
+}
+
+<span class="cm">// web/app/api/firmware/latest/route.ts</span>
+<span class="kw">export async function</span> GET(req: NextRequest) {
+  <span class="kw">const</span> deviceVer = req.headers.get(<span class="st">'x-fw-version'</span>)
+  <span class="kw">const</span> latest = process.env.LATEST_FW_VERSION  <span class="cm">// es. "1.5.0"</span>
+  <span class="kw">const</span> update_available = deviceVer !== latest
+  <span class="kw">return</span> NextResponse.json({
+    update_available,
+    version: latest,
+    url: update_available
+      ? `${process.env.FW_BASE_URL}/firmware-${latest}.bin`
+      : <span class="kw">null</span>
+  })
+}</div>
+        <div>
+          <div style="margin-bottom:12px">
+            <div class="ch" style="margin-bottom:10px"><span class="ctitle">Processo OTA</span></div>
+            <div class="ota-step">
+              <div class="ota-num">1</div>
+              <div><div class="step-title" style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px">Check versione</div><div style="font-size:11px;color:var(--color-text-secondary)">GET /api/firmware/latest ogni 24h · confronta semver</div></div>
+            </div>
+            <div class="ota-step">
+              <div class="ota-num">2</div>
+              <div><div class="step-title" style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px">Download .bin</div><div style="font-size:11px;color:var(--color-text-secondary)">File su Vercel Blob / GitHub Releases · HTTPS</div></div>
+            </div>
+            <div class="ota-step">
+              <div class="ota-num">3</div>
+              <div><div class="step-title" style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px">Flash su partizione OTA</div><div style="font-size:11px;color:var(--color-text-secondary)">ESP32 ha 2 partizioni app — flasha quella inattiva</div></div>
+            </div>
+            <div class="ota-step">
+              <div class="ota-num">4</div>
+              <div><div class="step-title" style="font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px">Reboot + rollback auto</div><div style="font-size:11px;color:var(--color-text-secondary)">Se boot fallisce 3 volte → torna alla versione precedente</div></div>
+            </div>
+          </div>
+          <div style="background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:12px">
+            <div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:6px">Firmware attuale: <strong style="color:var(--color-text-primary)">v1.4.2</strong> · Disponibile: <strong style="color:#1D9E75">v1.5.0</strong></div>
+            <div class="prog-wrap" style="margin-bottom:8px"><div class="prog" id="ota-prog" style="width:0%;background:#1D9E75"></div></div>
+            <button onclick="startOTA()" id="ota-btn" style="font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Aggiorna ora</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="tab-supabase" class="tc">
+      <div class="code-block"><span class="cm">-- supabase/migrations/009_devices.sql</span>
+<span class="cm">-- Registra ogni ESP32 nel sistema</span>
+
+<span class="kw">CREATE TABLE</span> devices (
+  id            UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  device_id     TEXT <span class="kw">UNIQUE NOT NULL</span>,  <span class="cm">-- UUID generato al primo boot</span>
+  name          TEXT,                     <span class="cm">-- 'EV-Diag-01'</span>
+  firmware_ver  TEXT,
+  last_seen     TIMESTAMPTZ,
+  last_ip       TEXT,
+  wifi_rssi     INT,
+  heap_free     INT,
+  uptime_s      INT,
+  config        JSONB,                    <span class="cm">-- can_speed, read_ms, ecc.</span>
+  vehicle_id    UUID <span class="kw">REFERENCES</span> vehicles(id),
+  created_at    TIMESTAMPTZ <span class="kw">DEFAULT NOW</span>()
+);
+
+<span class="cm">-- Heartbeat: ESP32 fa POST ogni 60s con stato hardware</span>
+<span class="cm">-- web/app/api/device/heartbeat/route.ts</span>
+<span class="kw">export async function</span> POST(req: NextRequest) {
+  <span class="kw">const</span> { device_id, firmware_ver, wifi_rssi, heap_free, uptime_s } = await req.json()
+
+  <span class="kw">await</span> supabase.from(<span class="st">'devices'</span>).upsert({
+    device_id, firmware_ver, wifi_rssi,
+    heap_free, uptime_s,
+    last_seen: <span class="kw">new</span> Date().toISOString(),
+    last_ip: req.headers.get(<span class="st">'x-forwarded-for'</span>)
+  }, { onConflict: <span class="st">'device_id'</span> })
+
+  <span class="cm">// Risponde con eventuali comandi remoti pendenti</span>
+  <span class="kw">const</span> { data: cmd } = await supabase
+    .from(<span class="st">'device_commands'</span>)
+    .select(<span class="st">'*'</span>)
+    .eq(<span class="st">'device_id'</span>, device_id)
+    .eq(<span class="st">'executed'</span>, <span class="kw">false</span>)
+    .limit(<span class="num">1</span>)
+    .single()
+
+  <span class="kw">return</span> NextResponse.json({
+    ok: <span class="kw">true</span>,
+    command: cmd ?? <span class="kw">null</span>  <span class="cm">// es. { type: 'ota_update' } o { type: 'reset_config' }</span>
+  })
+}
+
+<span class="cm">-- Tabella comandi remoti (dashboard → ESP32)</span>
+<span class="kw">CREATE TABLE</span> device_commands (
+  id         UUID <span class="kw">PRIMARY KEY DEFAULT</span> gen_random_uuid(),
+  device_id  TEXT <span class="kw">REFERENCES</span> devices(device_id),
+  type       TEXT,   <span class="cm">-- 'ota_update','reset_config','rescan_vehicle','reboot'</span>
+  payload    JSONB,
+  executed   BOOLEAN <span class="kw">DEFAULT false</span>,
+  created_at TIMESTAMPTZ <span class="kw">DEFAULT NOW</span>()
+);</div>
+      <button onclick="sendPrompt('Come inviare comandi remoti a ESP32 tramite Supabase device_commands — reboot, OTA update, reset config?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Comandi remoti ↗</button>
+    </div>
+
+    <div id="tab-wiring" class="tc">
+      <div class="code-block"><span class="cm">// firmware/src/can/can_driver.cpp</span>
+<span class="cm">// Inizializzazione TWAI nativo ESP32-S3</span>
+<span class="cm">// SN65HVD230: TX→GPIO17, RX→GPIO18, VCC→3.3V, GND→GND</span>
+<span class="cm">// OBD2: CAN-H→CANH, CAN-L→CANL, pin16→DC-DC→3.3V</span>
+
+<span class="kw">#include</span> <span class="st">"driver/twai.h"</span>
+
+<span class="kw">bool</span> CanDriver::begin(<span class="kw">int</span> speed_kbps) {
+  twai_timing_config_t timing;
+  <span class="kw">switch</span>(speed_kbps) {
+    <span class="kw">case</span> <span class="num">500</span>:  timing = TWAI_TIMING_CONFIG_500KBITS();  <span class="kw">break</span>;
+    <span class="kw">case</span> <span class="num">250</span>:  timing = TWAI_TIMING_CONFIG_250KBITS();  <span class="kw">break</span>;
+    <span class="kw">case</span> <span class="num">1000</span>: timing = TWAI_TIMING_CONFIG_1MBITS();    <span class="kw">break</span>;
+    default:   timing = TWAI_TIMING_CONFIG_500KBITS();
+  }
+
+  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(
+    (gpio_num_t)<span class="num">17</span>,  <span class="cm">// TX pin</span>
+    (gpio_num_t)<span class="num">18</span>,  <span class="cm">// RX pin</span>
+    TWAI_MODE_NORMAL
+  );
+
+  twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
+
+  <span class="kw">if</span> (twai_driver_install(&amp;g_config, &amp;timing, &amp;f_config) != ESP_OK) {
+    Serial.println(<span class="st">"[CAN] Install fallito"</span>);
+    <span class="kw">return false</span>;
+  }
+  <span class="kw">if</span> (twai_start() != ESP_OK) {
+    Serial.println(<span class="st">"[CAN] Start fallito"</span>);
+    <span class="kw">return false</span>;
+  }
+
+  Serial.printf(<span class="st">"[CAN] OK — %d kbps — TX:17 RX:18\n"</span>, speed_kbps);
+  <span class="kw">return true</span>;
+}
+
+<span class="kw">bool</span> CanDriver::send(uint32_t id, uint8_t* data, uint8_t len) {
+  twai_message_t msg = {};
+  msg.identifier = id;
+  msg.data_length_code = len;
+  memcpy(msg.data, data, len);
+  <span class="kw">return</span> twai_transmit(&amp;msg, pdMS_TO_TICKS(<span class="num">100</span>)) == ESP_OK;
+}
+
+<span class="kw">bool</span> CanDriver::receive(twai_message_t* msg, uint32_t timeout_ms) {
+  <span class="kw">return</span> twai_receive(msg, pdMS_TO_TICKS(timeout_ms)) == ESP_OK;
+}</div>
+      <button onclick="sendPrompt('Come aggiungere il filtro hardware TWAI per ricevere solo i messaggi UDS rilevanti e ridurre il carico CPU su ESP32?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Filtro TWAI hardware ↗</button>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:8px;padding-top:4px">
+    <button class="save-btn danger" onclick="sendPrompt('Come implementare il reset sicuro della configurazione NVS da dashboard remota con conferma a due step?')">Reset configurazione ↗</button>
+    <button class="save-btn" onclick="sendPrompt('Come fare il reboot remoto di ESP32 tramite comando Supabase device_commands dalla dashboard?')">Reboot remoto ↗</button>
+    <button class="save-btn" onclick="sendPrompt('Come fare il backup completo della configurazione ESP32 su Supabase e ripristinarla su un nuovo dispositivo?')">Backup config ↗</button>
+  </div>
+
+</div>
+
+<script>
+const LOGS = [
+  ['07:22:01','ok','[BOOT] ESP32-S3 avviato — fw v1.4.2'],
+  ['07:22:02','info','[NVS] Config caricata: EV-Diag-01'],
+  ['07:22:03','ok','[WiFi] Connesso a Casa-WiFi — IP 192.168.1.42'],
+  ['07:22:04','ok','[CAN] TWAI init OK — 500kbps — TX:17 RX:18'],
+  ['07:22:05','info','[VEH] Fingerprint CAN in corso…'],
+  ['07:22:07','ok','[VEH] Rilevato: Renault Zoe ZE50 (score: 9/11)'],
+  ['07:22:08','info','[LIB] Cache SPIFFS valida (2 giorni) — skip download'],
+  ['07:22:08','ok','[LIB] 13 segnali caricati per Zoe ZE50'],
+  ['07:22:09','ok','[SESS] Sessione #2848 aperta — SOC 91%'],
+  ['07:22:10','ok','[UDS] Lettura BMS OK — SOC:91 SOH:91 Temp:24°C'],
+  ['07:22:11','info','[API] POST /api/ingest — 200 OK — 48ms'],
+  ['09:14:22','warn','[DTC] P0AA6 rilevato — trigger AI analysis'],
+  ['09:14:24','ok','[AI] Analisi Claude completata — salvata in Supabase'],
+];
+
+function renderLogs(entries) {
+  const w = document.getElementById('log-wrap');
+  w.innerHTML = entries.map(([t,level,msg])=>`
+    <div class="log-line">
+      <span class="log-time">${t}</span>
+      <span class="log-${level}">${msg}</span>
+    </div>`).join('');
+  w.scrollTop = w.scrollHeight;
+}
+
+function clearLog() {
+  document.getElementById('log-wrap').innerHTML='';
+}
+
+let logLines = [...LOGS];
+function addFakeLogs() {
+  const now = new Date();
+  const t = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  const options = [
+    ['ok',  '[UDS] Lettura BMS OK — SOC:78 Temp:24°C'],
+    ['info','[API] POST /api/ingest — 200 OK — 51ms'],
+    ['ok',  '[SESS] Heartbeat inviato — heap:186KB uptime:50400s'],
+    ['warn','[CAN] Bus load: 68% — considera ridurre read_ms'],
+    ['ok',  '[LIB] Cache check — nessun aggiornamento'],
+  ];
+  const [level, msg] = options[Math.floor(Math.random()*options.length)];
+  logLines = [...logLines.slice(-20), [t, level, msg]];
+  renderLogs(logLines);
+}
+
+function markDirty(id) {
+  document.getElementById(id)?.classList.remove('saved');
+}
+
+function saveConfig() {
+  ['f-ssid','f-pass','f-url','f-apikey','f-name'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.add('saved');
+  });
+  sendPrompt('Come inviare la nuova configurazione WiFi e server a ESP32 via HTTPS OTA senza accesso fisico al dispositivo?');
+}
+
+function toggleSwitch(el) {
+  el.classList.toggle('on');
+}
+
+let otaRunning = false;
+function startOTA() {
+  if(otaRunning) return;
+  otaRunning = true;
+  const btn = document.getElementById('ota-btn');
+  const bar = document.getElementById('ota-prog');
+  btn.textContent = 'Download…'; btn.disabled=true;
+  let pct = 0;
+  const iv = setInterval(()=>{
+    pct = Math.min(100, pct + Math.random()*12);
+    bar.style.width = Math.round(pct)+'%';
+    if(pct >= 100) {
+      clearInterval(iv);
+      btn.textContent = 'Aggiornato!';
+      sendPrompt('Come configurare il rollback automatico del firmware OTA su ESP32 se il nuovo boot fallisce?');
+    }
+  }, 250);
+}
+
+function sw(btn, id) {
+  btn.closest('.card').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  btn.closest('.card').querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('on');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+renderLogs(LOGS);
+</script>

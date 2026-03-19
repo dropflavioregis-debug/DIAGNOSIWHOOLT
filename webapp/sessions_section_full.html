@@ -1,0 +1,531 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{font-family:var(--font-sans);display:flex;flex-direction:column;gap:14px;padding:4px 0}
+.row{display:grid;gap:12px}
+.r4{grid-template-columns:repeat(4,minmax(0,1fr))}
+.r2{grid-template-columns:1fr 300px}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px}
+.mlabel{font-size:11px;color:var(--color-text-secondary);margin-bottom:5px}
+.mval{font-size:22px;font-weight:500;color:var(--color-text-primary);line-height:1}
+.msub{font-size:11px;color:var(--color-text-tertiary);margin-top:3px}
+.ch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ctitle{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+.br{background:#FCEBEB;color:#A32D2D}.ba{background:#FAEEDA;color:#854F0B}
+.bg{background:#EAF3DE;color:#3B6D11}.bb{background:#E6F1FB;color:#185FA5}
+.bdot{width:5px;height:5px;border-radius:50%;background:currentColor}
+.tab-row{display:flex;gap:2px;margin-bottom:12px}
+.tab{padding:5px 11px;font-size:12px;border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-secondary);border:none;background:transparent;transition:all .12s}
+.tab.on{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
+.tc{display:none}.tc.active{display:block}
+.code-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-secondary);line-height:1.7;overflow-x:auto;white-space:pre}
+.kw{color:#185FA5}.cm{color:var(--color-text-tertiary)}.st{color:#3B6D11}.num{color:#854F0B}
+.sess-item{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);overflow:hidden;margin-bottom:8px;cursor:pointer;transition:border-color .12s}
+.sess-item:hover{border-color:var(--color-border-secondary)}
+.sess-item.active-sess{border-color:var(--color-border-info);border-width:1px}
+.sess-head{display:flex;align-items:center;gap:10px;padding:10px 12px}
+.sess-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.sess-info{flex:1;min-width:0}
+.sess-title{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.sess-meta{font-size:11px;color:var(--color-text-secondary);margin-top:1px}
+.sess-stats{display:flex;gap:8px;align-items:center}
+.sess-stat{font-size:11px;color:var(--color-text-tertiary)}
+.sess-expand{display:none;padding:0 12px 12px;border-top:0.5px solid var(--color-border-tertiary)}
+.sess-item.open .sess-expand{display:block}
+.expand-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.expand-block{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:9px 11px}
+.eb-label{font-size:10px;color:var(--color-text-tertiary);margin-bottom:3px}
+.eb-val{font-size:13px;font-weight:500;color:var(--color-text-primary)}
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl-item{display:flex;gap:12px;padding:8px 0}
+.tl-line{display:flex;flex-direction:column;align-items:center;flex-shrink:0}
+.tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:3px}
+.tl-track{width:1px;background:var(--color-border-tertiary);flex:1;margin-top:4px}
+.tl-item:last-child .tl-track{display:none}
+.tl-body{flex:1;padding-bottom:8px}
+.tl-time{font-size:10px;color:var(--color-text-tertiary);margin-bottom:2px}
+.tl-title{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.tl-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.4;margin-top:2px}
+.filter-row{display:flex;gap:6px;margin-bottom:12px;align-items:center}
+.filter-btn{padding:4px 10px;font-size:11px;border:0.5px solid var(--color-border-tertiary);border-radius:20px;background:transparent;color:var(--color-text-secondary);cursor:pointer;transition:all .12s}
+.filter-btn.on{background:var(--color-background-secondary);color:var(--color-text-primary)}
+.search-input{flex:1;padding:6px 10px;font-size:12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary)}
+.flow-step{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:0.5px solid var(--color-border-tertiary)}
+.flow-step:last-child{border:none}
+.step-num{width:20px;height:20px;border-radius:50%;background:var(--color-background-info);color:var(--color-text-info);font-size:11px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.step-title{font-size:12px;font-weight:500;color:var(--color-text-primary);margin-bottom:2px}
+.step-desc{font-size:11px;color:var(--color-text-secondary);line-height:1.5}
+.step-tag{font-family:var(--font-mono);font-size:10px;background:var(--color-background-secondary);padding:1px 5px;border-radius:3px;color:var(--color-text-secondary)}
+.mini-chart{height:32px;display:flex;align-items:flex-end;gap:2px}
+.mini-bar{flex:1;border-radius:2px 2px 0 0;min-height:3px;transition:opacity .12s}
+.mini-bar:hover{opacity:.7}
+</style>
+
+<div class="wrap">
+
+  <div class="row r4">
+    <div class="metric">
+      <div class="mlabel">Sessioni totali</div>
+      <div class="mval">143</div>
+      <div class="msub">Da marzo 2024</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">km totali loggati</div>
+      <div class="mval">8.240</div>
+      <div class="msub">Media 57 km/sessione</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">kWh consumati</div>
+      <div class="mval">1.163</div>
+      <div class="msub">Media 14.1 kWh/100km</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">Sessione attiva</div>
+      <div class="mval" style="font-size:14px;padding-top:5px;color:#1D9E75">#2848 live</div>
+      <div class="msub">Iniziata 14 min fa</div>
+    </div>
+  </div>
+
+  <div class="row r2">
+    <div class="card">
+      <div class="ch">
+        <span class="ctitle">Sessioni</span>
+        <div style="display:flex;gap:6px">
+          <button onclick="sendPrompt('Come esportare tutte le sessioni in CSV da Supabase con Next.js?')" style="font-size:11px;padding:4px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Esporta CSV ↗</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <input class="search-input" placeholder="Cerca per data, DTC, km…" oninput="filterSessions(this.value)">
+        <button class="filter-btn on" onclick="setFilter(this,'all')">Tutte</button>
+        <button class="filter-btn" onclick="setFilter(this,'dtc')">Con DTC</button>
+        <button class="filter-btn" onclick="setFilter(this,'ok')">OK</button>
+      </div>
+      <div id="sess-list"></div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="card">
+        <div class="ch"><span class="ctitle">Timeline sessione #2847</span></div>
+        <div class="timeline" id="timeline"></div>
+      </div>
+      <div class="card">
+        <div class="ch">
+          <span class="ctitle">Consumo ultime 12 sessioni</span>
+        </div>
+        <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px">kWh/100km</div>
+        <div class="mini-chart" id="minichart"></div>
+        <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:10px;color:var(--color-text-tertiary)">
+          <span>12 sess. fa</span><span>adesso</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ctitle">Implementazione</span></div>
+    <div class="tab-row">
+      <button class="tab on" onclick="sw(this,'esp')">ESP32 lifecycle</button>
+      <button class="tab" onclick="sw(this,'api')">API Vercel</button>
+      <button class="tab" onclick="sw(this,'db')">Supabase schema</button>
+      <button class="tab" onclick="sw(this,'hook')">Hook React</button>
+      <button class="tab" onclick="sw(this,'flow')">Flusso completo</button>
+    </div>
+
+    <div id="tab-esp" class="tc active">
+      <div class="code-block"><span class="cm">// firmware/src/session_manager.cpp</span>
+<span class="cm">// Gestisce ciclo vita sessione sull'ESP32</span>
+<span class="cm">// Sessione = dal momento in cui auto si accende a quando si spegne</span>
+
+<span class="kw">class</span> SessionManager {
+  String  session_id;
+  uint32_t started_ms;
+  float   soc_start, soc_end;
+  uint32_t km_start;
+
+<span class="kw">public</span>:
+  <span class="kw">void</span> onIgnitionOn() {
+    <span class="cm">// 1. Genera UUID locale (usato offline finché WiFi non disponibile)</span>
+    session_id = generateUUID();
+    started_ms = millis();
+
+    <span class="cm">// 2. Leggi stato iniziale via UDS</span>
+    soc_start = uds.readSOC();
+    km_start  = uds.readOdometer();
+
+    <span class="cm">// 3. Apri sessione sul server (async, non blocca)</span>
+    api.postAsync(<span class="st">"/api/sessions/open"</span>, {
+      <span class="st">"session_id"</span>: session_id,
+      <span class="st">"device_id"</span>:  nvs.get(<span class="st">"device_id"</span>),
+      <span class="st">"vehicle_id"</span>: nvs.get(<span class="st">"vehicle_id"</span>),
+      <span class="st">"soc_start"</span>:  soc_start,
+      <span class="st">"km_start"</span>:   km_start,
+      <span class="st">"started_at"</span>: getISOTime()
+    });
+
+    <span class="cm">// 4. Avvia loop lettura ogni 1s</span>
+    xTaskCreate(readLoop, <span class="st">"ReadLoop"</span>, <span class="num">8192</span>, <span class="kw">this</span>, <span class="num">5</span>, &amp;readTaskHandle);
+  }
+
+  <span class="kw">void</span> onIgnitionOff() {
+    <span class="cm">// Ferma il loop</span>
+    vTaskDelete(readTaskHandle);
+
+    soc_end = uds.readSOC();
+    float km_end = uds.readOdometer();
+
+    <span class="cm">// Chiudi sessione sul server con statistiche finali</span>
+    api.post(<span class="st">"/api/sessions/close"</span>, {
+      <span class="st">"session_id"</span>:  session_id,
+      <span class="st">"soc_end"</span>:     soc_end,
+      <span class="st">"km_driven"</span>:   km_end - km_start,
+      <span class="st">"duration_s"</span>:  (millis() - started_ms) / <span class="num">1000</span>,
+      <span class="st">"ended_at"</span>:    getISOTime()
+    });
+    session_id = <span class="st">""</span>;
+  }
+
+  <span class="kw">static void</span> readLoop(<span class="kw">void</span>* arg) {
+    SessionManager* self = (<span class="kw">static</span>_cast&lt;SessionManager*&gt;(arg));
+    <span class="kw">while</span>(<span class="kw">true</span>) {
+      self-&gt;readAndPost();
+      vTaskDelay(<span class="num">1000</span> / portTICK_PERIOD_MS);
+    }
+  }
+};</div>
+      <button onclick="sendPrompt('Come rilevare accensione e spegnimento auto dal CAN bus senza pin fisici su ESP32?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Rilevare ignition dal CAN ↗</button>
+    </div>
+
+    <div id="tab-api" class="tc">
+      <div class="code-block"><span class="cm">// web/app/api/sessions/open/route.ts</span>
+
+<span class="kw">export async function</span> POST(req: NextRequest) {
+  <span class="kw">const</span> body = await req.json()
+
+  <span class="kw">const</span> { data, error } = await supabase
+    .from(<span class="st">'sessions'</span>)
+    .insert({
+      id:         body.session_id,   <span class="cm">// UUID generato dall'ESP32</span>
+      device_id:  body.device_id,
+      vehicle_id: body.vehicle_id,
+      soc_start:  body.soc_start,
+      km_start:   body.km_start,
+      started_at: body.started_at,
+      status:     <span class="st">'active'</span>
+    })
+    .select().single()
+
+  <span class="kw">return</span> NextResponse.json({ ok: !error, session: data })
+}
+
+<span class="cm">// web/app/api/sessions/close/route.ts</span>
+
+<span class="kw">export async function</span> POST(req: NextRequest) {
+  <span class="kw">const</span> { session_id, soc_end, km_driven, duration_s } = await req.json()
+
+  <span class="cm">// Calcola kWh consumati (SOC delta * capacità pack)</span>
+  <span class="kw">const</span> { data: sess } = await supabase
+    .from(<span class="st">'sessions'</span>).select(<span class="st">'soc_start,vehicle_id'</span>)
+    .eq(<span class="st">'id'</span>, session_id).single()
+
+  <span class="kw">const</span> { data: veh } = await supabase
+    .from(<span class="st">'vehicles'</span>).select(<span class="st">'battery_kwh'</span>)
+    .eq(<span class="st">'id'</span>, sess.vehicle_id).single()
+
+  <span class="kw">const</span> soc_delta = sess.soc_start - soc_end
+  <span class="kw">const</span> kwh_used  = (soc_delta / <span class="num">100</span>) * veh.battery_kwh
+  <span class="kw">const</span> kwh_100km = km_driven > <span class="num">0</span> ? (kwh_used / km_driven) * <span class="num">100</span> : <span class="kw">null</span>
+
+  await supabase.from(<span class="st">'sessions'</span>).update({
+    soc_end, km_driven, duration_s, kwh_used,
+    kwh_per_100km: kwh_100km,
+    status: <span class="st">'completed'</span>,
+    ended_at: <span class="kw">new</span> Date().toISOString()
+  }).eq(<span class="st">'id'</span>, session_id)
+
+  <span class="cm">// Trigger analisi AI fine sessione</span>
+  await fetch(<span class="st">'/api/ai/session-report'</span>, {
+    method: <span class="st">'POST'</span>,
+    body: JSON.stringify({ session_id })
+  })
+
+  <span class="kw">return</span> NextResponse.json({ ok: <span class="kw">true</span> })
+}</div>
+      <button onclick="sendPrompt('Come gestire le sessioni offline quando ESP32 non ha WiFi durante la guida e sincronizzarle dopo?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Gestione offline ↗</button>
+    </div>
+
+    <div id="tab-db" class="tc">
+      <div class="code-block"><span class="cm">-- supabase/migrations/001_sessions.sql</span>
+
+<span class="kw">CREATE TABLE</span> sessions (
+  id            UUID <span class="kw">PRIMARY KEY</span>,   <span class="cm">-- generato dall'ESP32</span>
+  device_id     TEXT <span class="kw">NOT NULL</span>,
+  vehicle_id    UUID <span class="kw">REFERENCES</span> vehicles(id),
+
+  <span class="cm">-- Stato</span>
+  status        TEXT <span class="kw">DEFAULT</span> <span class="st">'active'</span>,  <span class="cm">-- active | completed | error</span>
+
+  <span class="cm">-- Metriche sessione</span>
+  soc_start     FLOAT,
+  soc_end       FLOAT,
+  km_start      FLOAT,
+  km_driven     FLOAT,
+  duration_s    INT,
+  kwh_used      FLOAT,
+  kwh_per_100km FLOAT,
+
+  <span class="cm">-- Fingerprint CAN (per auto-detect)</span>
+  can_fingerprint JSONB,
+
+  <span class="cm">-- AI</span>
+  ai_diagnosis  JSONB,       <span class="cm">-- report completo Claude fine sessione</span>
+
+  <span class="cm">-- Timestamps</span>
+  started_at    TIMESTAMPTZ <span class="kw">NOT NULL</span>,
+  ended_at      TIMESTAMPTZ,
+  created_at    TIMESTAMPTZ <span class="kw">DEFAULT NOW</span>()
+);
+
+<span class="cm">-- Vista sessioni con conteggio DTC (usata dalla lista)</span>
+<span class="kw">CREATE VIEW</span> sessions_summary <span class="kw">AS</span>
+  <span class="kw">SELECT</span>
+    s.*,
+    COUNT(d.id) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> d.is_active)      <span class="kw">AS</span> dtc_active_count,
+    COUNT(d.id) <span class="kw">FILTER</span> (<span class="kw">WHERE</span> d.severity=<span class="st">'critical'</span>) <span class="kw">AS</span> dtc_critical_count,
+    COUNT(b.id)                                     <span class="kw">AS</span> battery_readings_count
+  <span class="kw">FROM</span> sessions s
+  <span class="kw">LEFT JOIN</span> dtc_readings d <span class="kw">ON</span> d.session_id = s.id
+  <span class="kw">LEFT JOIN</span> battery_readings b <span class="kw">ON</span> b.session_id = s.id
+  <span class="kw">GROUP BY</span> s.id
+  <span class="kw">ORDER BY</span> s.started_at <span class="kw">DESC</span>;
+
+<span class="cm">-- Indice per paginazione veloce</span>
+<span class="kw">CREATE INDEX</span> idx_sessions_started
+  <span class="kw">ON</span> sessions(started_at <span class="kw">DESC</span>)
+  <span class="kw">WHERE</span> status = <span class="st">'completed'</span>;</div>
+      <button onclick="sendPrompt('Come implementare la paginazione cursor-based per sessions_summary con infinite scroll in Next.js?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Paginazione infinita ↗</button>
+    </div>
+
+    <div id="tab-hook" class="tc">
+      <div class="code-block"><span class="cm">// web/hooks/useSessions.ts</span>
+
+<span class="kw">export function</span> useSessions() {
+  <span class="kw">const</span> [sessions, setSessions] = useState&lt;Session[]&gt;([])
+  <span class="kw">const</span> [activeSession, setActive] = useState&lt;Session | null&gt;(<span class="kw">null</span>)
+  <span class="kw">const</span> supabase = createClientComponentClient()
+
+  useEffect(() =&gt; {
+    <span class="cm">// 1. Carica ultime 50 sessioni</span>
+    <span class="kw">const</span> load = <span class="kw">async</span> () =&gt; {
+      <span class="kw">const</span> { data } = await supabase
+        .from(<span class="st">'sessions_summary'</span>)   <span class="cm">// usa la VIEW</span>
+        .select(<span class="st">'*'</span>)
+        .order(<span class="st">'started_at'</span>, { ascending: <span class="kw">false</span> })
+        .limit(<span class="num">50</span>)
+      setSessions(data ?? [])
+      setActive(data?.find(s =&gt; s.status === <span class="st">'active'</span>) ?? <span class="kw">null</span>)
+    }
+    load()
+
+    <span class="cm">// 2. Realtime: nuova sessione aperta o chiusa</span>
+    <span class="kw">const</span> channel = supabase
+      .channel(<span class="st">'sessions-changes'</span>)
+      .on(<span class="st">'postgres_changes'</span>, {
+        event: <span class="st">'*'</span>,              <span class="cm">// INSERT e UPDATE</span>
+        schema: <span class="st">'public'</span>,
+        table: <span class="st">'sessions'</span>
+      }, payload =&gt; {
+        <span class="kw">if</span> (payload.eventType === <span class="st">'INSERT'</span>) {
+          setSessions(prev =&gt; [payload.new <span class="kw">as</span> Session, ...prev])
+          setActive(payload.new <span class="kw">as</span> Session)
+        }
+        <span class="kw">if</span> (payload.eventType === <span class="st">'UPDATE'</span>) {
+          setSessions(prev =&gt; prev.map(s =&gt;
+            s.id === payload.new.id ? { ...s, ...payload.new } : s
+          ))
+          <span class="kw">if</span> (payload.new.status === <span class="st">'completed'</span>) setActive(<span class="kw">null</span>)
+        }
+      })
+      .subscribe()
+
+    <span class="kw">return</span> () =&gt; { supabase.removeChannel(channel) }
+  }, [])
+
+  <span class="kw">return</span> { sessions, activeSession }
+}</div>
+      <button onclick="sendPrompt('Come aggiungere filtri per data range e ricerca full-text nelle sessioni con Supabase e Next.js?')" style="margin-top:10px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Filtri avanzati ↗</button>
+    </div>
+
+    <div id="tab-flow" class="tc">
+      <div class="flow-step">
+        <div class="step-num">1</div>
+        <div>
+          <div class="step-title">Accensione → ESP32 rileva ignition <span class="step-tag">CAN msg 0x354</span></div>
+          <div class="step-desc">ESP32 monitora CAN bus a riposo. Quando arriva messaggio di ignition on, genera UUID sessione localmente, legge SOC e odometro iniziali via UDS.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">2</div>
+        <div>
+          <div class="step-title">POST /api/sessions/open <span class="step-tag">Vercel Edge</span></div>
+          <div class="step-desc">Crea riga in Supabase con status=active. Supabase Realtime notifica la dashboard → banner "Sessione live" appare automaticamente.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">3</div>
+        <div>
+          <div class="step-title">Loop lettura ogni 1s <span class="step-tag">FreeRTOS task</span></div>
+          <div class="step-desc">Task separato legge batteria + DTC e fa POST a /api/ingest. Dati salvati in battery_readings e dtc_readings con session_id.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">4</div>
+        <div>
+          <div class="step-title">Spegnimento → POST /api/sessions/close <span class="step-tag">calcolo stats</span></div>
+          <div class="step-desc">Server calcola km_driven, kwh_used, kwh_per_100km. Aggiorna sessione a status=completed. Trigger automatico analisi AI Claude.</div>
+        </div>
+      </div>
+      <div class="flow-step">
+        <div class="step-num">5</div>
+        <div>
+          <div class="step-title">Report AI → Supabase → Dashboard <span class="step-tag">~2s</span></div>
+          <div class="step-desc">Claude genera report sessione in JSON. Salvato in sessions.ai_diagnosis. Dashboard riceve update via Realtime e mostra il report.</div>
+        </div>
+      </div>
+      <button onclick="sendPrompt('Come gestire la sessione offline su ESP32 con buffer locale su SD card quando non c è WiFi?')" style="margin-top:12px;font-size:11px;padding:6px 14px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">Buffer offline su SD card ↗</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const SESSIONS = [
+  { id:'2848', date:'Oggi 09:00', status:'active', km:12, duration:'14 min', soc_start:91, soc_end:null, dtc:0, critical:0, kwh:null, label:'In corso' },
+  { id:'2847', date:'Ieri 18:15', status:'completed', km:87, duration:'1h 12m', soc_start:98, soc_end:34, dtc:2, critical:1, kwh:14.2, label:'Con DTC' },
+  { id:'2846', date:'Ieri 09:30', status:'completed', km:23, duration:'28 min', soc_start:56, soc_end:41, dtc:0, critical:0, kwh:13.8, label:'OK' },
+  { id:'2845', date:'14 mar 17:45', status:'completed', km:134, duration:'1h 55m', soc_start:100, soc_end:22, dtc:1, critical:0, kwh:15.1, label:'Con DTC' },
+  { id:'2844', date:'13 mar 08:10', status:'completed', km:45, duration:'52 min', soc_start:72, soc_end:48, dtc:0, critical:0, kwh:13.5, label:'OK' },
+  { id:'2843', date:'12 mar 16:00', status:'completed', km:67, duration:'1h 05m', soc_start:88, soc_end:51, dtc:0, critical:0, kwh:14.0, label:'OK' },
+];
+
+const TL_EVENTS = [
+  { time:'18:15', color:'#1D9E75', title:'Sessione avviata', desc:'SOC 98% · Odometro 24.847 km · BMS ECU risposta OK' },
+  { time:'18:16', color:'#378ADD', title:'Scansione DTC completata', desc:'11 ECU scansionate · P0AA6 e U0100 rilevati · BMS + BCM' },
+  { time:'18:22', color:'#E24B4A', title:'Analisi AI triggered', desc:'DTC critico P0AA6 → Claude analisi immediata · 1.3s risposta' },
+  { time:'18:45', color:'#EF9F27', title:'Anomalia termica cella #47', desc:'Delta +3°C rilevato · trigger monitoraggio attivato' },
+  { time:'19:27', color:'#1D9E75', title:'Sessione chiusa', desc:'87 km · 14.2 kWh/100km · SOC 34% · Report AI generato' },
+];
+
+let openSess = null;
+let currentFilter = 'all';
+
+function renderSessions(filter, search) {
+  const list = document.getElementById('sess-list');
+  let items = SESSIONS;
+  if (filter === 'dtc') items = items.filter(s => s.dtc > 0);
+  if (filter === 'ok')  items = items.filter(s => s.dtc === 0 && s.status === 'completed');
+  if (search) {
+    const q = search.toLowerCase();
+    items = items.filter(s =>
+      s.id.includes(q) || s.date.toLowerCase().includes(q) || s.label.toLowerCase().includes(q)
+    );
+  }
+
+  list.innerHTML = items.map((s,i) => {
+    const isActive = s.status === 'active';
+    const dotColor = isActive ? '#1D9E75' : s.critical > 0 ? '#E24B4A' : s.dtc > 0 ? '#EF9F27' : '#888780';
+    const badgeCls = isActive ? 'bb' : s.critical > 0 ? 'br' : s.dtc > 0 ? 'ba' : 'bg';
+    const kwh = s.kwh ? `${s.kwh} kWh/100km · ` : '';
+    const socInfo = s.soc_end !== null ? `${s.soc_start}%→${s.soc_end}%` : `SOC ${s.soc_start}%`;
+
+    return `<div class="sess-item ${isActive?'active-sess':''}" id="si-${i}" onclick="toggleSess(${i})">
+      <div class="sess-head">
+        <div class="sess-dot" style="background:${dotColor}"></div>
+        <div class="sess-info">
+          <div class="sess-title">#${s.id} — ${s.date}</div>
+          <div class="sess-meta">${s.km} km · ${s.duration} · ${kwh}${socInfo}</div>
+        </div>
+        <div class="sess-stats">
+          ${s.dtc > 0 ? `<span class="badge ${badgeCls}">${s.dtc} DTC</span>` : `<span class="badge bg"><span class="bdot"></span>OK</span>`}
+          ${isActive ? `<span class="badge bb"><span class="bdot"></span>live</span>` : ''}
+        </div>
+      </div>
+      <div class="sess-expand">
+        <div class="expand-grid">
+          <div class="expand-block"><div class="eb-label">km percorsi</div><div class="eb-val">${s.km} km</div></div>
+          <div class="expand-block"><div class="eb-label">durata</div><div class="eb-val">${s.duration}</div></div>
+          <div class="expand-block"><div class="eb-label">efficienza</div><div class="eb-val">${s.kwh ? s.kwh+' kWh/100' : '—'}</div></div>
+          <div class="expand-block"><div class="eb-label">SOC inizio→fine</div><div class="eb-val">${socInfo}</div></div>
+          <div class="expand-block"><div class="eb-label">DTC rilevati</div><div class="eb-val">${s.dtc} (${s.critical} critici)</div></div>
+          <div class="expand-block"><div class="eb-label">sessione ID</div><div class="eb-val" style="font-family:var(--font-mono);font-size:11px">#${s.id}</div></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button onclick="event.stopPropagation();sendPrompt('Come costruire la pagina dettaglio sessione #${s.id} con grafici SOC, DTC e analisi AI in Next.js?')"
+            style="font-size:11px;padding:5px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">
+            Dettaglio completo ↗
+          </button>
+          ${s.status==='completed'?`<button onclick="event.stopPropagation();sendPrompt('Come generare un PDF report della sessione #${s.id} con i dati Supabase?')"
+            style="font-size:11px;padding:5px 12px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:transparent;color:var(--color-text-secondary);cursor:pointer">
+            Esporta PDF ↗
+          </button>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleSess(i) {
+  const el = document.getElementById('si-'+i);
+  if (!el) return;
+  const was = el.classList.contains('open');
+  document.querySelectorAll('.sess-item').forEach(x=>x.classList.remove('open'));
+  if (!was) el.classList.add('open');
+}
+
+function setFilter(btn, f) {
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  currentFilter = f;
+  renderSessions(f, document.querySelector('.search-input').value);
+}
+
+function filterSessions(q) {
+  renderSessions(currentFilter, q);
+}
+
+function renderTimeline() {
+  document.getElementById('timeline').innerHTML = TL_EVENTS.map(e=>`
+    <div class="tl-item">
+      <div class="tl-line">
+        <div class="tl-dot" style="background:${e.color}"></div>
+        <div class="tl-track"></div>
+      </div>
+      <div class="tl-body">
+        <div class="tl-time">${e.time}</div>
+        <div class="tl-title">${e.title}</div>
+        <div class="tl-desc">${e.desc}</div>
+      </div>
+    </div>`).join('');
+}
+
+function renderMiniChart() {
+  const vals = [13.2,14.8,13.9,15.1,14.0,13.5,14.2,13.8,14.6,13.4,14.1,14.2];
+  const max = Math.max(...vals);
+  const colors = vals.map(v => v > 14.5 ? '#EF9F27' : '#378ADD');
+  document.getElementById('minichart').innerHTML = vals.map((v,i)=>
+    `<div class="mini-bar" style="height:${Math.round(v/max*100)}%;background:${colors[i]}" title="${v} kWh/100km"></div>`
+  ).join('');
+}
+
+function sw(btn, id) {
+  btn.closest('.card').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  btn.closest('.card').querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  btn.classList.add('on');
+  document.getElementById('tab-'+id).classList.add('active');
+}
+
+renderSessions('all','');
+renderTimeline();
+renderMiniChart();
+</script>

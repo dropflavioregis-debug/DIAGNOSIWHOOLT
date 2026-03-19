@@ -1,0 +1,30 @@
+# EV Diagnostic System — Cursor Rules
+
+## Architettura
+- Firmware: C++ con PlatformIO per ESP32-S3
+- Backend: Next.js 14 App Router su Vercel
+- Database: Supabase (PostgreSQL)
+- AI: Claude API (claude-sonnet-4-20250514)
+
+## Convenzioni firmware
+- Usa TWAI nativo ESP32 (non MCP2515)
+- Transceiver: SN65HVD230 su GPIO17 (TX) e GPIO18 (RX)
+- Config sempre in NVS, mai hardcoded
+- Librerie DID/DTC sempre da LittleFS (filesystem), mai hardcoded
+- Gestisci sempre disconnessione WiFi con retry
+
+## Convenzioni backend
+- TypeScript strict mode ovunque
+- Tutti gli endpoint API autenticati con API key header
+- Dati IoT salvati sempre in Supabase prima di processare
+- Claude API solo per analisi testuale, mai per logica dati
+
+## Database
+- Usa sempre UUID per primary key
+- Timestamp sempre TIMESTAMPTZ
+- JSONB per dati non strutturati (metadata, fingerprint)
+
+## Librerie veicoli
+- Formato interno sempre JSON (anche se sorgente è CSV o DBC)
+- Schema: { vehicle_id, signals: [...], dtc: [...] }
+- Ogni segnale ha sempre: did, formula, unit, category
