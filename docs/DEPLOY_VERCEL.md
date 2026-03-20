@@ -25,11 +25,13 @@ In **Settings** → **Environment Variables** aggiungi (per **Production**, e op
 
 Riferimento: `.env.example` in root (senza valori reali).
 
-## 3. Build
+## 3. Build e install
 
-- **Build Command:** `npm run build` (default con preset Next.js).
+- **Install Command:** `npm install --ignore-scripts` (definito in `web/vercel.json`).  
+  `@cardog/corgi` dipende da `better-sqlite3` (build nativo); il VIN decoder usa solo `@cardog/corgi/browser` + DB da CDN, quindi **non serve** compilare `better-sqlite3`. Con Node 24 su Vercel la compilazione fallisce; `--ignore-scripts` evita il problema.
+- **Build Command:** `npm run build`.
 - **Output:** Vercel usa automaticamente `.next` per Next.js.
-- Verifica in locale: `cd web && npm run build`.
+- Verifica in locale: `cd web && npm install --ignore-scripts && npm run build`.
 
 ## 4. Comportamento su Vercel
 

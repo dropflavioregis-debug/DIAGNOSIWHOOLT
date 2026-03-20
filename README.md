@@ -20,7 +20,7 @@ npm install
 npm run dev
 ```
 
-Se `npm install` fallisce per la build nativa di `better-sqlite3` (dipendenza di Corgi), usa `npm install --ignore-scripts`: il backend usa il runtime browser di Corgi con DB da CDN, quindi non serve la build nativa.
+Se `npm install` fallisce per la build nativa di `better-sqlite3` (dipendenza di Corgi), usa `npm install --ignore-scripts`: il backend usa il runtime browser di Corgi con DB da CDN, quindi non serve la build nativa. **Su Vercel** questo è già impostato in `web/vercel.json` (`installCommand`).
 
 App in ascolto su [http://localhost:3000](http://localhost:3000).
 
