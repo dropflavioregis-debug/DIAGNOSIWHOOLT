@@ -45,6 +45,7 @@ export default function SessionsPage() {
   const [showStartModal, setShowStartModal] = useState(false);
   const [devices, setDevices] = useState<string[]>([]);
   const [selectedDevice, setSelectedDevice] = useState("");
+  const [manualDeviceId, setManualDeviceId] = useState("");
   const [commandSending, setCommandSending] = useState(false);
   const [commandMessage, setCommandMessage] = useState<string | null>(null);
   const [metrics, setMetrics] = useState<SessionsMetrics>({
@@ -92,18 +93,22 @@ export default function SessionsPage() {
   }, [showStartModal]);
 
   async function sendStartSessionCommand() {
-    if (!selectedDevice) return;
+    const targetDevice = (manualDeviceId.trim() || selectedDevice || "").trim();
+    if (!targetDevice) {
+      setCommandMessage("Inserisci o seleziona un device_id");
+      return;
+    }
     setCommandSending(true);
     setCommandMessage(null);
     try {
       const res = await fetch("/api/device/commands", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ device_id: selectedDevice, command: "start_session" }),
+        body: JSON.stringify({ device_id: targetDevice, command: "start_session" }),
       });
       const data = (await res.json()) as { ok?: boolean; error?: string; message?: string };
       if (data.ok) {
-        setCommandMessage("Comando inviato. Il dispositivo lo riceverà entro ~15 s e avvierà una nuova sessione.");
+        setCommandMessage(`Comando inviato a ${targetDevice}. Il dispositivo lo riceverà al prossimo polling e avvierà una nuova sessione.`);
         window.setTimeout(() => loadSessions(), 3000);
         window.setTimeout(() => loadSessions(), 8000);
       } else {
@@ -207,14 +212,10 @@ export default function SessionsPage() {
                 Invia comando dal web
               </div>
               <p className="mb-2 text-[11px]" style={{ color: "var(--color-text-secondary)" }}>
-                Scegli il dispositivo e invia «Avvia sessione». Il dispositivo riceverà il comando al prossimo polling (max ~15 s).
+                Scegli il dispositivo o inserisci il suo device_id e invia «Avvia sessione». Il dispositivo riceverà il comando al prossimo polling.
               </p>
-              {devices.length === 0 ? (
-                <p className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
-                  Nessun dispositivo in lista. Avvia almeno una sessione dal dispositivo per vederlo qui.
-                </p>
-              ) : (
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {devices.length > 0 && (
                   <select
                     value={selectedDevice}
                     onChange={(e) => setSelectedDevice(e.target.value)}
@@ -227,16 +228,29 @@ export default function SessionsPage() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="button"
-                    disabled={commandSending}
-                    onClick={sendStartSessionCommand}
-                    className="rounded-[var(--border-radius-md)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
-                    style={{ background: "var(--teal-500)", color: "white", border: "none" }}
-                  >
-                    {commandSending ? "Invio…" : "Avvia sessione su questo dispositivo"}
-                  </button>
-                </div>
+                )}
+                <input
+                  type="text"
+                  value={manualDeviceId}
+                  onChange={(e) => setManualDeviceId(e.target.value)}
+                  placeholder="oppure inserisci device_id (es. EV-Diag-01)"
+                  className="min-w-[240px] rounded-[var(--border-radius-md)] bg-[var(--color-background-primary)] px-2.5 py-1.5 text-xs"
+                  style={{ border: "0.5px solid var(--color-border-secondary)", color: "var(--color-text-primary)" }}
+                />
+                <button
+                  type="button"
+                  disabled={commandSending}
+                  onClick={sendStartSessionCommand}
+                  className="rounded-[var(--border-radius-md)] px-3 py-1.5 text-xs font-medium disabled:opacity-50"
+                  style={{ background: "var(--teal-500)", color: "white", border: "none" }}
+                >
+                  {commandSending ? "Invio…" : "Avvia sessione su questo dispositivo"}
+                </button>
+              </div>
+              {devices.length === 0 && (
+                <p className="mt-2 text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+                  Nessun dispositivo in lista: usa il campo manuale con il device_id configurato nell&apos;ESP32.
+                </p>
               )}
               {commandMessage && (
                 <p className="mt-2 text-[11px]" style={{ color: "var(--teal-600)" }}>

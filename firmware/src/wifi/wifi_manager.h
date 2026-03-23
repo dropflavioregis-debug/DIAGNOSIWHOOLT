@@ -32,6 +32,19 @@ void wifiStartReconfigureServer();
 // Call in loop when in STA to serve reconfigure page. Call when !wifiManagerLoop() && wifiIsConnected().
 void wifiReconfigureLoop();
 
+// Runtime diagnostics shown on local status page.
+void wifiSetRuntimeStatus(
+  bool canStarted,
+  bool snifferActive,
+  const char* sessionId,
+  const char* vehicleId,
+  bool lastIngestOk,
+  uint32_t lastIngestAgeMs
+);
+
+// Append one event line to local runtime log ring buffer.
+void wifiLogEvent(const char* message);
+
 }  // namespace ev_diag
 
 #endif  // WIFI_MANAGER_H

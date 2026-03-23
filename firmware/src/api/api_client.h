@@ -40,6 +40,10 @@ struct CanSnifferFrame {
 bool postCanSnifferStream(const char* serverUrl, const char* apiKey, const char* deviceId,
                           const char* sessionId, const CanSnifferFrame* frames, size_t numFrames);
 
+// Last HTTP diagnostics for local debugging page/logs.
+int apiGetLastHttpCode();
+const char* apiGetLastHttpPath();
+
 // Timeout and retry
 constexpr unsigned long HTTP_TIMEOUT_MS = 10000;
 constexpr int HTTP_MAX_RETRIES = 1;

@@ -15,6 +15,21 @@ static WebServer* s_server = nullptr;
 static DNSServer* s_dns = nullptr;
 static WebServer* s_reconfigureServer = nullptr;
 static bool s_apMode = false;
+static const size_t LOG_LINES_MAX = 80;
+static char s_logLines[LOG_LINES_MAX][128];
+static size_t s_logHead = 0;
+static size_t s_logCount = 0;
+
+struct RuntimeStatus {
+  bool canStarted;
+  bool snifferActive;
+  bool lastIngestOk;
+  uint32_t lastIngestAgeMs;
+  char sessionId[64];
+  char vehicleId[64];
+};
+
+static RuntimeStatus s_runtime = { false, false, false, 0, "", "" };
 
 static void getMacSuffix(char* out, size_t len) {
   uint8_t mac[6];
@@ -131,16 +146,106 @@ static const char RECONFIGURE_HTML[] =
   "<button type=\"submit\">Avvia connessione con il veicolo</button></form>"
   "<p><small>Collega il cavo OBD2 all&apos;auto e clicca il pulsante sopra per avviare una nuova sessione diagnostica. I dati appariranno nella dashboard.</small></p>"
   "<hr style=\"margin:1em 0\">"
+  "<h3 style=\"margin:0 0 .5em 0\">Stato runtime</h3>"
+  "<div id=\"statusBox\" style=\"font-family:monospace;font-size:12px;white-space:pre-wrap;background:#f4f4f4;border:1px solid #ddd;padding:.6em;border-radius:6px;margin-bottom:1em\">Caricamento stato...</div>"
+  "<h3 style=\"margin:0 0 .5em 0\">Log completo dispositivo</h3>"
+  "<div id=\"logBox\" style=\"font-family:monospace;font-size:12px;white-space:pre-wrap;background:#111;color:#d7ffd7;border:1px solid #333;padding:.6em;border-radius:6px;max-height:280px;overflow:auto\">Caricamento log...</div>"
+  "<hr style=\"margin:1em 0\">"
   "<form method=\"POST\" action=\"/reconfigure\">"
   "<button type=\"submit\">Apri configurazione (WiFi / Server / API key)</button></form>"
   "<p><small>Il dispositivo si riavvierà in hotspot EV-Diagnostic-XXXX. Connettiti e apri <strong>http://192.168.4.1</strong></small></p>"
+  "<script>"
+  "async function refreshStatus(){"
+  "try{"
+  "const r=await fetch('/status.json',{cache:'no-store'});"
+  "const d=await r.json();"
+  "if(!d||!d.ok){throw new Error('status');}"
+  "const lines=["
+  "'wifi_connected: '+d.wifi_connected,"
+  "'rssi: '+d.rssi,"
+  "'can_started: '+d.can_started,"
+  "'sniffer_active: '+d.sniffer_active,"
+  "'last_ingest_ok: '+d.last_ingest_ok,"
+  "'last_ingest_age_ms: '+d.last_ingest_age_ms,"
+  "'session_id: '+(d.session_id||'-'),"
+  "'vehicle_id: '+(d.vehicle_id||'-')"
+  "];"
+  "document.getElementById('statusBox').textContent=lines.join('\\n');"
+  "const logs=(d.logs||[]);"
+  "document.getElementById('logBox').textContent=logs.length?logs.join('\\n'):'Nessun log ancora disponibile.';"
+  "}catch(e){"
+  "document.getElementById('statusBox').textContent='Errore lettura stato';"
+  "}"
+  "}"
+  "refreshStatus();"
+  "setInterval(refreshStatus,1000);"
+  "</script>"
   "</body></html>";
 
 static void handleReconfigurePage() {
   if (!s_reconfigureServer) return;
-  char buf[640];
+  char buf[4600];
   snprintf(buf, sizeof(buf), RECONFIGURE_HTML, WiFi.localIP().toString().c_str());
   s_reconfigureServer->send(200, "text/html", buf);
+}
+
+static void appendLogLine(const char* message) {
+  if (!message || message[0] == '\0') return;
+  unsigned long nowSec = millis() / 1000UL;
+  size_t idx = s_logHead;
+  char cleaned[96];
+  size_t j = 0;
+  for (size_t i = 0; message[i] != '\0' && j < sizeof(cleaned) - 1; i++) {
+    char c = message[i];
+    cleaned[j++] = (c == '"' || c == '\\') ? '\'' : c;
+  }
+  cleaned[j] = '\0';
+  snprintf(s_logLines[idx], sizeof(s_logLines[idx]), "[%lus] %s", nowSec, cleaned);
+  s_logHead = (s_logHead + 1) % LOG_LINES_MAX;
+  if (s_logCount < LOG_LINES_MAX) s_logCount++;
+}
+
+static void handleStatusJson() {
+  if (!s_reconfigureServer) return;
+  char json[8192];
+  char* p = json;
+  size_t rem = sizeof(json);
+  int n = snprintf(
+    p, rem,
+    "{\"ok\":true,\"ip\":\"%s\",\"wifi_connected\":%s,\"rssi\":%d,"
+    "\"can_started\":%s,\"sniffer_active\":%s,\"last_ingest_ok\":%s,\"last_ingest_age_ms\":%lu,"
+    "\"session_id\":\"%s\",\"vehicle_id\":\"%s\",\"logs\":[",
+    WiFi.localIP().toString().c_str(),
+    (WiFi.status() == WL_CONNECTED) ? "true" : "false",
+    (int)WiFi.RSSI(),
+    s_runtime.canStarted ? "true" : "false",
+    s_runtime.snifferActive ? "true" : "false",
+    s_runtime.lastIngestOk ? "true" : "false",
+    (unsigned long)s_runtime.lastIngestAgeMs,
+    s_runtime.sessionId,
+    s_runtime.vehicleId
+  );
+  if (n < 0 || (size_t)n >= rem) {
+    s_reconfigureServer->send(500, "application/json", "{\"ok\":false}");
+    return;
+  }
+  p += n;
+  rem -= (size_t)n;
+  for (size_t i = 0; i < s_logCount; i++) {
+    size_t idx = (s_logHead + LOG_LINES_MAX - s_logCount + i) % LOG_LINES_MAX;
+    const char* line = s_logLines[idx];
+    n = snprintf(p, rem, "%s\"%s\"", (i == 0) ? "" : ",", line);
+    if (n < 0 || (size_t)n >= rem) break;
+    p += n;
+    rem -= (size_t)n;
+  }
+  n = snprintf(p, rem, "]}");
+  if (n < 0 || (size_t)n >= rem) {
+    s_reconfigureServer->send(500, "application/json", "{\"ok\":false}");
+    return;
+  }
+  s_reconfigureServer->sendHeader("Cache-Control", "no-store");
+  s_reconfigureServer->send(200, "application/json", json);
 }
 
 static void handleStartSession() {
@@ -176,9 +281,11 @@ void wifiStartReconfigureServer() {
   if (s_reconfigureServer) return;
   s_reconfigureServer = new WebServer(80);
   s_reconfigureServer->on("/", handleReconfigurePage);
+  s_reconfigureServer->on("/status.json", HTTP_GET, handleStatusJson);
   s_reconfigureServer->on("/start-session", HTTP_POST, handleStartSession);
   s_reconfigureServer->on("/reconfigure", HTTP_POST, handleReconfigure);
   s_reconfigureServer->begin();
+  appendLogLine("HTTP reconfigure server started");
 }
 
 void wifiReconfigureLoop() {
@@ -189,6 +296,36 @@ bool wifiManagerLoop() {
   if (s_apMode && s_dns) s_dns->processNextRequest();
   if (s_apMode && s_server) s_server->handleClient();
   return s_apMode;
+}
+
+void wifiSetRuntimeStatus(
+  bool canStarted,
+  bool snifferActive,
+  const char* sessionId,
+  const char* vehicleId,
+  bool lastIngestOk,
+  uint32_t lastIngestAgeMs
+) {
+  s_runtime.canStarted = canStarted;
+  s_runtime.snifferActive = snifferActive;
+  s_runtime.lastIngestOk = lastIngestOk;
+  s_runtime.lastIngestAgeMs = lastIngestAgeMs;
+  if (sessionId) {
+    strncpy(s_runtime.sessionId, sessionId, sizeof(s_runtime.sessionId) - 1);
+    s_runtime.sessionId[sizeof(s_runtime.sessionId) - 1] = '\0';
+  } else {
+    s_runtime.sessionId[0] = '\0';
+  }
+  if (vehicleId) {
+    strncpy(s_runtime.vehicleId, vehicleId, sizeof(s_runtime.vehicleId) - 1);
+    s_runtime.vehicleId[sizeof(s_runtime.vehicleId) - 1] = '\0';
+  } else {
+    s_runtime.vehicleId[0] = '\0';
+  }
+}
+
+void wifiLogEvent(const char* message) {
+  appendLogLine(message);
 }
 
 }  // namespace ev_diag

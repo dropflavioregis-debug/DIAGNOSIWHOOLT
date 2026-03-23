@@ -6,6 +6,19 @@
 
 namespace ev_diag {
 
+static int s_lastHttpCode = 0;
+static char s_lastHttpPath[64] = "";
+
+static void setLastHttpDiag(const char* path, int code) {
+  s_lastHttpCode = code;
+  if (path) {
+    strncpy(s_lastHttpPath, path, sizeof(s_lastHttpPath) - 1);
+    s_lastHttpPath[sizeof(s_lastHttpPath) - 1] = '\0';
+  } else {
+    s_lastHttpPath[0] = '\0';
+  }
+}
+
 static String urlStripTrailingSlash(const char* base) {
   String s = base;
   while (s.endsWith("/")) s.remove(s.length() - 1);
@@ -28,6 +41,7 @@ static bool doPost(const char* serverUrl, const char* apiKey, const char* path,
 
   int code = http.POST(jsonBody ? jsonBody : "{}");
   if (outCode) *outCode = code;
+  setLastHttpDiag(path, code);
   http.end();
   return (code >= 200 && code < 300);
 }
@@ -48,6 +62,7 @@ static bool doPostWithResponse(const char* serverUrl, const char* apiKey, const 
 
   int code = http.POST(jsonBody ? jsonBody : "{}");
   if (outCode) *outCode = code;
+  setLastHttpDiag(path, code);
   bool ok = (code >= 200 && code < 300);
   if (ok) {
     String payload = http.getString();
@@ -74,6 +89,7 @@ static bool doGet(const char* serverUrl, const char* apiKey, const char* path,
 
   int code = http.GET();
   if (outCode) *outCode = code;
+  setLastHttpDiag(path, code);
   bool ok = (code >= 200 && code < 300);
   if (ok) {
     String payload = http.getString();
@@ -205,6 +221,14 @@ bool postCanSnifferStream(const char* serverUrl, const char* apiKey, const char*
   int code;
   bool ok = doPost(serverUrl, apiKey, "/api/can-sniffer/stream", bodyBuf, &code);
   return ok;
+}
+
+int apiGetLastHttpCode() {
+  return s_lastHttpCode;
+}
+
+const char* apiGetLastHttpPath() {
+  return s_lastHttpPath;
 }
 
 }  // namespace ev_diag

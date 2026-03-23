@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
+#include <LittleFS.h>
 #include "config/config.h"
 #include "config/nvs_config.h"
 #include "can/can_driver.h"
@@ -43,6 +44,49 @@ static char s_detectJsonBuf[512];
 static char s_detectRespBuf[1024];
 static char s_setupVehicleIdBuf[64];
 static char s_setupLibBuf[4096];
+static bool s_lastIngestOk = false;
+static int s_lastIngestFailCode = 0;
+static int s_lastCommandsFailCode = 0;
+static int s_lastSnifferFailCode = 0;
+
+static bool loadConfigFromFilesystemIfNeeded(NvsConfig& cfg) {
+  if (configHasWifi(cfg)) return true;
+  if (!LittleFS.begin(false)) return false;
+  File f = LittleFS.open("/config.json", "r");
+  if (!f) return false;
+  if (f.size() <= 0 || f.size() > 2048) {
+    f.close();
+    return false;
+  }
+  static char fileBuf[2048];
+  size_t n = f.readBytes(fileBuf, sizeof(fileBuf) - 1);
+  f.close();
+  fileBuf[n] = '\0';
+
+  StaticJsonDocument<1024> doc;
+  if (deserializeJson(doc, fileBuf) != DeserializationError::Ok) return false;
+
+  NvsConfig fsCfg = {};
+  fsCfg.can_speed_kbps = config::CAN_SPEED_Kbps_DEFAULT;
+  const char* ssid = doc["wifi_ssid"] | "";
+  const char* pass = doc["wifi_password"] | "";
+  const char* server = doc["server_url"] | "";
+  const char* apiKey = doc["api_key"] | "";
+  const char* device = doc["device_name"] | "EV-Diag-01";
+  uint32_t canSpeed = doc["can_speed_kbps"] | (uint32_t)config::CAN_SPEED_Kbps_DEFAULT;
+
+  if (!ssid || ssid[0] == '\0') return false;
+  strncpy(fsCfg.wifi_ssid, ssid, sizeof(fsCfg.wifi_ssid) - 1);
+  strncpy(fsCfg.wifi_password, pass, sizeof(fsCfg.wifi_password) - 1);
+  strncpy(fsCfg.server_url, server, sizeof(fsCfg.server_url) - 1);
+  strncpy(fsCfg.api_key, apiKey, sizeof(fsCfg.api_key) - 1);
+  strncpy(fsCfg.device_name, device, sizeof(fsCfg.device_name) - 1);
+  fsCfg.can_speed_kbps = canSpeed;
+
+  if (!configSave(fsCfg)) return false;
+  configLoad(cfg);
+  return configHasWifi(cfg);
+}
 
 static void getDeviceId(char* out, size_t len) {
   if (s_cfg.device_name[0] != '\0') {
@@ -234,12 +278,15 @@ static void processDeviceCommands(const char* json) {
   if (strstr(json, "\"start_session\"") != nullptr) {
     sessionForceNew();
     Serial.println("Command: start_session");
+    wifiLogEvent("Command received: start_session");
   }
   // sniffer_active dalla dashboard (subscribe CAN Sniffer)
   if (strstr(json, "\"sniffer_active\":true") != nullptr) {
     s_snifferActive = true;
+    wifiLogEvent("Command received: sniffer_active=true");
   } else if (strstr(json, "\"sniffer_active\"") != nullptr) {
     s_snifferActive = false;
+    wifiLogEvent("Command received: sniffer_active=false");
   }
   // Estensibile: altri comandi es. "reboot", "sync_config" ecc.
 }
@@ -248,15 +295,24 @@ void setup() {
   Serial.begin(115200);
   delay(500);
   Serial.println("EV-Diagnostic firmware");
+  wifiLogEvent("Boot firmware");
 
   if (!nvsInit()) {
     Serial.println("NVS init failed");
+    wifiLogEvent("NVS init failed");
     return;
   }
   configLoad(s_cfg);
 
   if (!libLoaderInit()) {
     Serial.println("FS init failed");
+    wifiLogEvent("LittleFS init failed");
+  }
+
+  if (loadConfigFromFilesystemIfNeeded(s_cfg)) {
+    Serial.println("Config loaded from NVS/FS");
+  } else if (!configHasWifi(s_cfg)) {
+    Serial.println("No config in NVS/FS");
   }
 
   int txGpio = config::CAN_TX_GPIO;
@@ -264,21 +320,25 @@ void setup() {
   int speedKbps = (s_cfg.can_speed_kbps > 0) ? (int)s_cfg.can_speed_kbps : config::CAN_SPEED_Kbps_DEFAULT;
   if (canInit(txGpio, rxGpio, speedKbps)) {
     Serial.println("CAN OK");
+    wifiLogEvent("CAN init OK");
   }
   udsClientInit(uds::OBD_REQUEST_ID, uds::OBD_RESPONSE_ID);
 
   if (!configHasWifi(s_cfg)) {
     Serial.println("No WiFi config -> AP + captive portal");
+    wifiLogEvent("No WiFi config, starting AP portal");
     wifiStartAPAndCaptivePortal();
     return;
   }
 
   if (!wifiConnectSTA(s_cfg)) {
     Serial.println("STA connect failed, starting AP");
+    wifiLogEvent("STA connect failed, fallback AP");
     wifiStartAPAndCaptivePortal();
     return;
   }
   Serial.println("WiFi connected");
+  wifiLogEvent("WiFi connected");
   Serial.print("Reconfigure: http://");
   Serial.println(WiFi.localIP());
   wifiStartReconfigureServer();
@@ -291,6 +351,7 @@ void setup() {
         if (postVehicleDetectWithResponse(
                 s_cfg.server_url, s_cfg.api_key, s_detectJsonBuf, s_detectRespBuf, sizeof(s_detectRespBuf))) {
           Serial.println("Vehicle detect OK");
+          wifiLogEvent("Vehicle detect OK");
           if (parseVehicleIdFromResponse(s_detectRespBuf, s_setupVehicleIdBuf, sizeof(s_setupVehicleIdBuf))) {
             strncpy(s_vehicle_id, s_setupVehicleIdBuf, sizeof(s_vehicle_id) - 1);
             s_vehicle_id[sizeof(s_vehicle_id) - 1] = '\0';
@@ -298,6 +359,7 @@ void setup() {
                     s_cfg.server_url, s_cfg.api_key, s_setupVehicleIdBuf, s_setupLibBuf, sizeof(s_setupLibBuf))) {
               if (saveLibToSpiffs(s_setupVehicleIdBuf, s_setupLibBuf, strlen(s_setupLibBuf))) {
                 Serial.println("Lib saved to SPIFFS");
+                wifiLogEvent("Vehicle lib saved to SPIFFS");
               }
             }
           }
@@ -308,6 +370,7 @@ void setup() {
     if (readVin(uds::DID_VIN, s_vin, sizeof(s_vin))) {
       Serial.print("VIN: ");
       Serial.println(s_vin);
+      wifiLogEvent("VIN read OK");
     }
   }
 
@@ -323,7 +386,9 @@ void loop() {
   if (!wifiIsConnected()) {
     if (millis() - s_lastWifiRetryMs >= WIFI_RETRY_INTERVAL_MS) {
       s_lastWifiRetryMs = millis();
-      wifiConnectSTA(s_cfg);
+      if (wifiConnectSTA(s_cfg)) {
+        wifiLogEvent("WiFi reconnected");
+      }
     }
     delay(100);
     return;
@@ -335,6 +400,23 @@ void loop() {
     s_lastIngestMs = millis();
     if (buildAndPostIngest()) {
       Serial.println("Ingest OK");
+      s_lastIngestOk = true;
+      s_lastIngestFailCode = 0;
+    } else {
+      s_lastIngestOk = false;
+      const int code = apiGetLastHttpCode();
+      if (code != s_lastIngestFailCode) {
+        s_lastIngestFailCode = code;
+        char logLine[120];
+        snprintf(
+          logLine,
+          sizeof(logLine),
+          "Ingest FAIL %s code=%d",
+          apiGetLastHttpPath(),
+          code
+        );
+        wifiLogEvent(logLine);
+      }
     }
   }
 
@@ -352,7 +434,22 @@ void loop() {
     char deviceId[40];
     getDeviceId(deviceId, sizeof(deviceId));
     if (getDeviceCommands(s_cfg.server_url, s_cfg.api_key, deviceId, s_cmdBuf, sizeof(s_cmdBuf))) {
+      s_lastCommandsFailCode = 0;
       processDeviceCommands(s_cmdBuf);
+    } else {
+      const int code = apiGetLastHttpCode();
+      if (code != s_lastCommandsFailCode) {
+        s_lastCommandsFailCode = code;
+        char logLine[120];
+        snprintf(
+          logLine,
+          sizeof(logLine),
+          "Commands poll FAIL %s code=%d",
+          apiGetLastHttpPath(),
+          code
+        );
+        wifiLogEvent(logLine);
+      }
     }
   }
 
@@ -381,10 +478,34 @@ void loop() {
       if (postCanSnifferStream(
               s_cfg.server_url, s_cfg.api_key, deviceId,
               (sid && sid[0] != '\0') ? sid : nullptr, s_snifferBatch, n)) {
+        s_lastSnifferFailCode = 0;
         // ok
+      } else {
+        const int code = apiGetLastHttpCode();
+        if (code != s_lastSnifferFailCode) {
+          s_lastSnifferFailCode = code;
+          char logLine[120];
+          snprintf(
+            logLine,
+            sizeof(logLine),
+            "Sniffer stream FAIL %s code=%d",
+            apiGetLastHttpPath(),
+            code
+          );
+          wifiLogEvent(logLine);
+        }
       }
     }
   }
+
+  wifiSetRuntimeStatus(
+    canIsStarted(),
+    s_snifferActive,
+    sessionGetId(),
+    s_vehicle_id[0] != '\0' ? s_vehicle_id : nullptr,
+    s_lastIngestOk,
+    millis() - s_lastIngestMs
+  );
 
   delay(50);
 }

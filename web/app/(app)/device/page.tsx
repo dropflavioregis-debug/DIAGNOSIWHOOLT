@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { SectionCard } from "@/components/common/SectionCard";
+import { CanSnifferPanel } from "@/components/dashboard/CanSnifferPanel";
 
 export default function DevicePage() {
   const [origin, setOrigin] = useState("");
+  const [monitorDeviceId, setMonitorDeviceId] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") setOrigin(window.location.origin);
@@ -56,6 +58,27 @@ export default function DevicePage() {
             Copia
           </button>
         </div>
+      </SectionCard>
+
+      <SectionCard title="Monitor CAN in tempo reale">
+        <p className="text-xs text-[var(--color-text-secondary)] mb-3">
+          Inserisci il <strong className="text-[var(--color-text-primary)]">device_id</strong> configurato sull&apos;ESP32
+          per vedere in tempo reale se stanno arrivando frame CAN dal veicolo.
+        </p>
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+          <label className="text-[11px] text-[var(--color-text-secondary)]" htmlFor="monitor-device-id">
+            Device ID
+          </label>
+          <input
+            id="monitor-device-id"
+            type="text"
+            placeholder="es. evdiag-esp32-01"
+            value={monitorDeviceId}
+            onChange={(e) => setMonitorDeviceId(e.target.value)}
+            className="w-full sm:w-[280px] rounded-md border border-[var(--color-border-secondary)] bg-[var(--color-background-secondary)] px-2.5 py-2 text-xs text-[var(--color-text-primary)]"
+          />
+        </div>
+        <CanSnifferPanel deviceId={monitorDeviceId.trim() || null} />
       </SectionCard>
     </div>
   );
