@@ -167,7 +167,7 @@ static bool buildIngestBody(char* bodyBuf, size_t bodyLen) {
           uint8_t raw[8];
           size_t rawLen = 0;
           if (!readDataByIdentifier(did, raw, sizeof(raw), &rawLen) || rawLen == 0) continue;
-          JsonObject r = readings.add<JsonObject>();
+          JsonObject r = readings.createNestedObject();
           r["name"] = name;
           double val = (rawLen >= 1) ? (double)raw[0] : 0.0;
           const char* formula = s["formula"].as<const char*>();

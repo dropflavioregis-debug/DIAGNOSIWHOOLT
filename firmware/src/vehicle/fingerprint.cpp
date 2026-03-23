@@ -1,6 +1,7 @@
 #include "fingerprint.h"
 #include "can/can_driver.h"
 #include "config/config.h"
+#include <Arduino.h>
 #include <cstring>
 #include <cstdio>
 

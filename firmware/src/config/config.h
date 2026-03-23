@@ -35,7 +35,8 @@ constexpr unsigned long OTA_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 // NVS keys and max lengths
 constexpr const char* NVS_NAMESPACE = "ev_diag";
-constexpr size_t MAX_SSID_LEN = 32;
+// Not named MAX_SSID_LEN: ESP-IDF defines MAX_SSID_LEN as a macro (esp_wifi_types.h).
+constexpr size_t CFG_MAX_WIFI_SSID_LEN = 32;
 constexpr size_t MAX_PASSWORD_LEN = 64;
 constexpr size_t MAX_SERVER_URL_LEN = 128;
 constexpr size_t MAX_API_KEY_LEN = 64;

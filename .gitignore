@@ -13,6 +13,10 @@ scripts/dist/
 .env.local
 *.local
 
+# Firmware — local PlatformIO Python venv and build output
+firmware/.venv/
+firmware/.pio/
+
 # Editor / build cache
 .cursor/
 *.tsbuildinfo

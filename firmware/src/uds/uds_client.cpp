@@ -1,6 +1,7 @@
 #include "uds_client.h"
 #include "uds_services.h"
 #include "can/can_driver.h"
+#include <Arduino.h>
 #include <cstring>
 
 namespace ev_diag {
