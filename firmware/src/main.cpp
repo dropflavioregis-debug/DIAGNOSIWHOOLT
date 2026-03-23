@@ -33,6 +33,16 @@ static char s_vin[18] = { 0 };  // 17 chars + NUL, filled by readVin in setup
 static char s_vehicle_id[64] = { 0 };  // Set from vehicle/detect response
 static bool s_snifferActive = false;
 static unsigned long s_lastSnifferSendMs = 0;
+// Keep large buffers out of loopTask stack to prevent stack canary resets.
+static char s_ingestBodyBuf[2048];
+static char s_ingestRespBuf[256];
+static char s_libBuf[2048];
+static char s_cmdBuf[384];
+static ev_diag::CanSnifferFrame s_snifferBatch[SNIFFER_BATCH_MAX];
+static char s_detectJsonBuf[512];
+static char s_detectRespBuf[1024];
+static char s_setupVehicleIdBuf[64];
+static char s_setupLibBuf[4096];
 
 static void getDeviceId(char* out, size_t len) {
   if (s_cfg.device_name[0] != '\0') {
@@ -149,10 +159,10 @@ static bool buildIngestBody(char* bodyBuf, size_t bodyLen) {
   JsonArray rawDtc = doc.createNestedArray("raw_dtc");
 
   if (s_vehicle_id[0] != '\0' && canIsStarted()) {
-    char libBuf[2048];
-    if (loadLibFromSpiffs(s_vehicle_id, libBuf, sizeof(libBuf))) {
-      StaticJsonDocument<1536> libDoc;
-      if (deserializeJson(libDoc, libBuf) == DeserializationError::Ok && libDoc["signals"].is<JsonArray>()) {
+    if (loadLibFromSpiffs(s_vehicle_id, s_libBuf, sizeof(s_libBuf))) {
+      static StaticJsonDocument<1536> libDoc;
+      libDoc.clear();
+      if (deserializeJson(libDoc, s_libBuf) == DeserializationError::Ok && libDoc["signals"].is<JsonArray>()) {
         JsonArray sigs = libDoc["signals"].as<JsonArray>();
         size_t count = 0;
         for (JsonVariant v : sigs) {
@@ -203,18 +213,17 @@ static bool buildIngestBody(char* bodyBuf, size_t bodyLen) {
 static bool buildAndPostIngest() {
   if (s_cfg.server_url[0] == '\0') return false;
 
-  static char body[2048];
-  if (!buildIngestBody(body, sizeof(body))) return false;
+  if (!buildIngestBody(s_ingestBodyBuf, sizeof(s_ingestBodyBuf))) return false;
 
-  char respBuf[256];
-  if (!postIngestWithResponse(s_cfg.server_url, s_cfg.api_key, body, respBuf, sizeof(respBuf)))
+  if (!postIngestWithResponse(
+          s_cfg.server_url, s_cfg.api_key, s_ingestBodyBuf, s_ingestRespBuf, sizeof(s_ingestRespBuf)))
     return false;
 
   char parsedId[SESSION_ID_MAX_LEN];
-  if (parseSessionIdFromResponse(respBuf, parsedId, sizeof(parsedId)))
+  if (parseSessionIdFromResponse(s_ingestRespBuf, parsedId, sizeof(parsedId)))
     sessionSetId(parsedId);
   bool parsedSniffer = false;
-  if (parseSnifferActiveFromResponse(respBuf, &parsedSniffer))
+  if (parseSnifferActiveFromResponse(s_ingestRespBuf, &parsedSniffer))
     s_snifferActive = parsedSniffer;
   return true;
 }
@@ -278,18 +287,16 @@ void setup() {
     CanIdList ids;
     size_t n = collectCanIds(config::FINGERPRINT_TIMEOUT_MS, ids);
     if (n > 0) {
-      char jsonBuf[512];
-      if (canIdsToJson(ids, jsonBuf, sizeof(jsonBuf))) {
-        char detectRespBuf[1024];
-        if (postVehicleDetectWithResponse(s_cfg.server_url, s_cfg.api_key, jsonBuf, detectRespBuf, sizeof(detectRespBuf))) {
+      if (canIdsToJson(ids, s_detectJsonBuf, sizeof(s_detectJsonBuf))) {
+        if (postVehicleDetectWithResponse(
+                s_cfg.server_url, s_cfg.api_key, s_detectJsonBuf, s_detectRespBuf, sizeof(s_detectRespBuf))) {
           Serial.println("Vehicle detect OK");
-          char vehicleId[64];
-          if (parseVehicleIdFromResponse(detectRespBuf, vehicleId, sizeof(vehicleId))) {
-            strncpy(s_vehicle_id, vehicleId, sizeof(s_vehicle_id) - 1);
+          if (parseVehicleIdFromResponse(s_detectRespBuf, s_setupVehicleIdBuf, sizeof(s_setupVehicleIdBuf))) {
+            strncpy(s_vehicle_id, s_setupVehicleIdBuf, sizeof(s_vehicle_id) - 1);
             s_vehicle_id[sizeof(s_vehicle_id) - 1] = '\0';
-            char libBuf[4096];
-            if (getLibJson(s_cfg.server_url, s_cfg.api_key, vehicleId, libBuf, sizeof(libBuf))) {
-              if (saveLibToSpiffs(vehicleId, libBuf, strlen(libBuf))) {
+            if (getLibJson(
+                    s_cfg.server_url, s_cfg.api_key, s_setupVehicleIdBuf, s_setupLibBuf, sizeof(s_setupLibBuf))) {
+              if (saveLibToSpiffs(s_setupVehicleIdBuf, s_setupLibBuf, strlen(s_setupLibBuf))) {
                 Serial.println("Lib saved to SPIFFS");
               }
             }
@@ -344,9 +351,8 @@ void loop() {
     s_lastCommandsPollMs = millis();
     char deviceId[40];
     getDeviceId(deviceId, sizeof(deviceId));
-    char cmdBuf[384];
-    if (getDeviceCommands(s_cfg.server_url, s_cfg.api_key, deviceId, cmdBuf, sizeof(cmdBuf))) {
-      processDeviceCommands(cmdBuf);
+    if (getDeviceCommands(s_cfg.server_url, s_cfg.api_key, deviceId, s_cmdBuf, sizeof(s_cmdBuf))) {
+      processDeviceCommands(s_cmdBuf);
     }
   }
 
@@ -354,7 +360,6 @@ void loop() {
   if (s_snifferActive && canIsStarted() && s_cfg.server_url[0] != '\0' &&
       (millis() - s_lastSnifferSendMs >= SNIFFER_BATCH_INTERVAL_MS)) {
     s_lastSnifferSendMs = millis();
-    ev_diag::CanSnifferFrame batch[SNIFFER_BATCH_MAX];
     size_t n = 0;
     while (n < SNIFFER_BATCH_MAX) {
       uint32_t id;
@@ -363,10 +368,10 @@ void loop() {
       bool extd = false;
       if (!canReceive(&id, &len, data, sizeof(data), &extd))
         break;
-      batch[n].id = id;
-      batch[n].len = len;
-      batch[n].extended = extd;
-      for (uint8_t i = 0; i < 8; i++) batch[n].data[i] = data[i];
+      s_snifferBatch[n].id = id;
+      s_snifferBatch[n].len = len;
+      s_snifferBatch[n].extended = extd;
+      for (uint8_t i = 0; i < 8; i++) s_snifferBatch[n].data[i] = data[i];
       n++;
     }
     if (n > 0) {
@@ -375,7 +380,7 @@ void loop() {
       const char* sid = sessionGetId();
       if (postCanSnifferStream(
               s_cfg.server_url, s_cfg.api_key, deviceId,
-              (sid && sid[0] != '\0') ? sid : nullptr, batch, n)) {
+              (sid && sid[0] != '\0') ? sid : nullptr, s_snifferBatch, n)) {
         // ok
       }
     }
