@@ -13,7 +13,8 @@ bool canInit(int txGpio, int rxGpio, int speedKbps);
 bool canSend(uint32_t id, uint8_t len, const uint8_t* data);
 
 // Receive one frame (non-blocking, timeout 0). Returns true if frame received.
-bool canReceive(uint32_t* id, uint8_t* len, uint8_t* data, size_t dataMaxLen);
+// If extd_out is non-null, sets *extd_out for 29-bit extended identifiers.
+bool canReceive(uint32_t* id, uint8_t* len, uint8_t* data, size_t dataMaxLen, bool* extd_out = nullptr);
 
 // Stop and uninstall driver.
 void canStop();

@@ -360,17 +360,22 @@ void loop() {
       uint32_t id;
       uint8_t len;
       uint8_t data[8];
-      if (!canReceive(&id, &len, data, sizeof(data)))
+      bool extd = false;
+      if (!canReceive(&id, &len, data, sizeof(data), &extd))
         break;
       batch[n].id = id;
       batch[n].len = len;
+      batch[n].extended = extd;
       for (uint8_t i = 0; i < 8; i++) batch[n].data[i] = data[i];
       n++;
     }
     if (n > 0) {
       char deviceId[40];
       getDeviceId(deviceId, sizeof(deviceId));
-      if (postCanSnifferStream(s_cfg.server_url, s_cfg.api_key, deviceId, batch, n)) {
+      const char* sid = sessionGetId();
+      if (postCanSnifferStream(
+              s_cfg.server_url, s_cfg.api_key, deviceId,
+              (sid && sid[0] != '\0') ? sid : nullptr, batch, n)) {
         // ok
       }
     }

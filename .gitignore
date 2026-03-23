@@ -15,6 +15,7 @@ scripts/dist/
 
 # Firmware — local PlatformIO Python venv and build output
 firmware/.venv/
+firmware/.pio-venv/
 firmware/.pio/
 
 # Editor / build cache

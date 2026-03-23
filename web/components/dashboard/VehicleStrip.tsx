@@ -65,6 +65,14 @@ export function VehicleStrip({ vehicle }: VehicleStripProps) {
         >
           {vehicle.meta}
         </div>
+        {vehicle.liveSubtitle && (
+          <div
+            className="text-[11px]"
+            style={{ color: "var(--color-text-tertiary)", marginTop: "2px" }}
+          >
+            {vehicle.liveSubtitle}
+          </div>
+        )}
         {vehicle.vin && (
           <div
             className="text-[11px] font-mono"
@@ -75,9 +83,19 @@ export function VehicleStrip({ vehicle }: VehicleStripProps) {
           </div>
         )}
       </div>
-      {vehicle.connected && (
+      {vehicle.connectionStatus === "live" && (
         <div className="flex shrink-0 items-center gap-2">
           <StatusBadge variant="green">Connessa</StatusBadge>
+        </div>
+      )}
+      {vehicle.connectionStatus === "pending" && (
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusBadge variant="amber">Connessione…</StatusBadge>
+        </div>
+      )}
+      {vehicle.connectionStatus === "offline" && (
+        <div className="flex shrink-0 items-center gap-2">
+          <StatusBadge variant="gray">Non connessa</StatusBadge>
         </div>
       )}
     </div>

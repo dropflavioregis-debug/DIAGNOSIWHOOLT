@@ -1,4 +1,4 @@
-type Variant = "green" | "amber" | "red" | "blue";
+type Variant = "green" | "amber" | "red" | "blue" | "gray";
 
 const variants: Record<
   Variant,
@@ -8,6 +8,7 @@ const variants: Record<
   amber: { background: "var(--amber-50)", color: "var(--amber-600)" },
   red: { background: "var(--red-50)", color: "var(--red-600)" },
   blue: { background: "var(--blue-50)", color: "var(--blue-600)" },
+  gray: { background: "var(--color-background-secondary)", color: "var(--color-text-secondary)" },
 };
 
 interface StatusBadgeProps {

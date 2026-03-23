@@ -33,11 +33,12 @@ struct CanSnifferFrame {
   uint32_t id;
   uint8_t len;
   uint8_t data[8];
+  bool extended;
 };
 
-// POST /api/can-sniffer/stream — invia batch di frame CAN (solo se sniffer attivo). Returns true if 2xx.
+// POST /api/can-sniffer/stream — invia batch di frame CAN (solo se sniffer attivo). sessionId può essere nullptr.
 bool postCanSnifferStream(const char* serverUrl, const char* apiKey, const char* deviceId,
-                          const CanSnifferFrame* frames, size_t numFrames);
+                          const char* sessionId, const CanSnifferFrame* frames, size_t numFrames);
 
 // Timeout and retry
 constexpr unsigned long HTTP_TIMEOUT_MS = 10000;

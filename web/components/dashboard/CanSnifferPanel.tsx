@@ -5,6 +5,7 @@ import {
   subscribeSniffer,
   unsubscribeSniffer,
   getCanSnifferFrames,
+  getSnifferSubscriptionState,
   importCanSnifferFrames,
 } from "@/app/actions/can-sniffer";
 import type { CanFrame } from "@/lib/can-sniffer-frames-store";
@@ -14,6 +15,7 @@ import {
   type CanFrameForCsv,
 } from "@/lib/savvycan-csv";
 import { EmptyState } from "@/components/common/EmptyState";
+import { formatLastDataItaliano } from "@/lib/dashboard-live";
 
 const POLL_INTERVAL_MS = 1000;
 const MAX_LIST_FRAMES = 200;
@@ -22,6 +24,12 @@ interface CanSnifferPanelProps {
   deviceId: string | null;
   /** Lista device_id da sessioni (per selezionare dispositivo quando non c’è sessione attiva). */
   deviceIds?: string[];
+}
+
+function formatCanIdHex(id: number): string {
+  const extended = id > 0x7ff;
+  const hex = id.toString(16).toUpperCase();
+  return extended ? `0x${hex.padStart(8, "0")}` : `0x${hex.padStart(3, "0")}`;
 }
 
 function formatTs(iso: string): string {
@@ -40,7 +48,7 @@ function formatTs(iso: string): string {
 
 function frameToLine(f: CanFrame): string {
   const ts = f.ts ?? new Date().toISOString();
-  const idHex = "0x" + f.id.toString(16).toUpperCase().padStart(f.id > 0xFFF ? 4 : 3, "0");
+  const idHex = formatCanIdHex(f.id);
   const dataHex = (f.data ?? [])
     .slice(0, f.len)
     .map((b) => b.toString(16).toUpperCase().padStart(2, "0"))
@@ -58,6 +66,8 @@ export function CanSnifferPanel({ deviceId: propDeviceId, deviceIds = [] }: CanS
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>("");
   const recordedRef = useRef<CanFrame[]>([]);
   const lastRecordedTsRef = useRef<string>("");
+  /** Evita che la lettura stato da DB sovrascriva un toggle appena fatto dall’utente. */
+  const skipSnifferHydrationRef = useRef(false);
 
   const deviceId = propDeviceId?.trim() || selectedDeviceId.trim() || null;
 
@@ -84,6 +94,21 @@ export function CanSnifferPanel({ deviceId: propDeviceId, deviceIds = [] }: CanS
   }, [deviceIds, selectedDeviceId]);
 
   useEffect(() => {
+    skipSnifferHydrationRef.current = false;
+  }, [deviceId]);
+
+  useEffect(() => {
+    if (!deviceId) return;
+    let cancelled = false;
+    getSnifferSubscriptionState(deviceId).then((r) => {
+      if (!cancelled && r.ok && !skipSnifferHydrationRef.current) setSnifferOn(r.active);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [deviceId]);
+
+  useEffect(() => {
     if (!snifferOn || !deviceId) return;
     const t = setInterval(fetchFrames, POLL_INTERVAL_MS);
     fetchFrames();
@@ -92,6 +117,7 @@ export function CanSnifferPanel({ deviceId: propDeviceId, deviceIds = [] }: CanS
 
   async function handleToggleSniffer() {
     if (!deviceId) return;
+    skipSnifferHydrationRef.current = true;
     setLoading(true);
     setError(null);
     try {
@@ -302,6 +328,14 @@ export function CanSnifferPanel({ deviceId: propDeviceId, deviceIds = [] }: CanS
           {error}
         </p>
       )}
+      {snifferOn && displayFrames.length > 0 && (
+        <p className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
+          Ultimo frame nel log:{" "}
+          {formatLastDataItaliano(new Date(displayFrames[displayFrames.length - 1]?.ts ?? Date.now()))}
+          {" · "}
+          {displayFrames.length} frame in vista
+        </p>
+      )}
       {snifferOn && (
         <div
           className="rounded-[var(--border-radius-md)] overflow-auto font-mono text-[11px]"
@@ -340,7 +374,7 @@ export function CanSnifferPanel({ deviceId: propDeviceId, deviceIds = [] }: CanS
                       {formatTs(f.ts)}
                     </td>
                     <td className="py-1 px-2" style={{ color: "var(--color-text-info)" }}>
-                      0x{f.id.toString(16).toUpperCase().padStart(f.id > 0xfff ? 4 : 3, "0")}
+                      {formatCanIdHex(f.id)}
                     </td>
                     <td className="py-1 px-2" style={{ color: "var(--color-text-primary)" }}>
                       {(f.data ?? [])

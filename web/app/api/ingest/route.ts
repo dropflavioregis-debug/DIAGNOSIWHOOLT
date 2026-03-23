@@ -5,6 +5,13 @@ import { getSnifferActiveState } from "@/lib/device-sniffer-state";
 
 export const dynamic = "force-dynamic";
 
+function checkApiKey(request: NextRequest): boolean {
+  const apiKey = request.headers.get("x-api-key");
+  const envKey = process.env.API_KEY;
+  if (!envKey || envKey.length === 0) return true;
+  return apiKey === envKey;
+}
+
 interface IngestBody {
   device_id?: string;
   session_id?: string;
@@ -16,6 +23,9 @@ interface IngestBody {
 }
 
 export async function POST(request: NextRequest) {
+  if (!checkApiKey(request)) {
+    return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+  }
   try {
     const body = (await request.json()) as IngestBody;
     if (!body || typeof body !== "object") {

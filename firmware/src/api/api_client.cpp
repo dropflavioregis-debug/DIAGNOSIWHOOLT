@@ -155,25 +155,31 @@ bool getDeviceCommands(const char* serverUrl, const char* apiKey, const char* de
 }
 
 bool postCanSnifferStream(const char* serverUrl, const char* apiKey, const char* deviceId,
-                          const CanSnifferFrame* frames, size_t numFrames) {
+                          const char* sessionId, const CanSnifferFrame* frames, size_t numFrames) {
   if (!serverUrl || !deviceId || deviceId[0] == '\0' || !frames || numFrames == 0) return false;
   if (!WiFi.isConnected()) return false;
 
-  static char bodyBuf[2048];
+  static char bodyBuf[2300];
   char* p = bodyBuf;
   size_t remain = sizeof(bodyBuf);
-  int n = snprintf(p, remain, "{\"device_id\":\"%s\",\"frames\":[", deviceId);
+  int n;
+  if (sessionId && sessionId[0] != '\0') {
+    n = snprintf(p, remain, "{\"device_id\":\"%s\",\"session_id\":\"%s\",\"frames\":[", deviceId, sessionId);
+  } else {
+    n = snprintf(p, remain, "{\"device_id\":\"%s\",\"frames\":[", deviceId);
+  }
   if (n < 0 || (size_t)n >= remain) return false;
   p += n;
   remain -= (size_t)n;
 
+  bool firstFrame = true;
   for (size_t i = 0; i < numFrames; i++) {
     const CanSnifferFrame* f = &frames[i];
     if (f->len > 8) continue;
-    /* need space for {"id":...,"len":...,"data":[...]} and closing */
-    if (remain < (size_t)(40 + f->len * 4)) break;
+    const size_t need = (size_t)(48 + f->len * 4 + (f->extended ? 20u : 0u));
+    if (remain < need) break;
     n = snprintf(p, remain, "%s{\"id\":%lu,\"len\":%u,\"data\":[",
-                 i > 0 ? "," : "", (unsigned long)f->id, (unsigned)f->len);
+                 firstFrame ? "" : ",", (unsigned long)f->id, (unsigned)f->len);
     if (n < 0 || (size_t)n >= remain) break;
     p += n;
     remain -= (size_t)n;
@@ -183,10 +189,15 @@ bool postCanSnifferStream(const char* serverUrl, const char* apiKey, const char*
       p += n;
       remain -= (size_t)n;
     }
-    n = snprintf(p, remain, "]}");
+    if (f->extended) {
+      n = snprintf(p, remain, "],\"extended\":true}");
+    } else {
+      n = snprintf(p, remain, "]}");
+    }
     if (n < 0 || (size_t)n >= remain) return false;
     p += n;
     remain -= (size_t)n;
+    firstFrame = false;
   }
   n = snprintf(p, remain, "]}");
   if (n < 0 || (size_t)n >= remain) return false;

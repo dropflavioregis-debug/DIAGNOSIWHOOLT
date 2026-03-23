@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import type { MetricItem } from "@/lib/types";
 import { MetricCard } from "@/components/common/MetricCard";
 import { SectionCard } from "@/components/common/SectionCard";
@@ -53,7 +53,7 @@ export default function SessionsPage() {
     computed_from_readings: false,
   });
 
-  useEffect(() => {
+  const loadSessions = useCallback(() => {
     fetch("/api/sessions")
       .then((res) => res.json())
       .then((data: { sessions?: SessionItem[]; metrics?: SessionsMetrics }) => {
@@ -73,6 +73,10 @@ export default function SessionsPage() {
         setMetrics({ total_distance_km: 0, total_energy_kwh: 0, computed_from_readings: false });
       });
   }, []);
+
+  useEffect(() => {
+    loadSessions();
+  }, [loadSessions]);
 
   useEffect(() => {
     if (!showStartModal) return;
@@ -100,6 +104,8 @@ export default function SessionsPage() {
       const data = (await res.json()) as { ok?: boolean; error?: string; message?: string };
       if (data.ok) {
         setCommandMessage("Comando inviato. Il dispositivo lo riceverà entro ~15 s e avvierà una nuova sessione.");
+        window.setTimeout(() => loadSessions(), 3000);
+        window.setTimeout(() => loadSessions(), 8000);
       } else {
         setCommandMessage(data.error ?? "Errore invio comando");
       }

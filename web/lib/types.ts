@@ -1,7 +1,14 @@
+/** Presenza effettiva veicolo/CAN: dati recenti, avvio sessione senza dati, o assenza link. */
+export type VehicleConnectionStatus = "live" | "pending" | "offline" | "none";
+
 export interface VehicleInfo {
   name: string;
   meta: string;
+  /** Riga opzionale sotto meta: ultimo dato telemetrico (aggiornata dal client in tempo quasi reale). */
+  liveSubtitle?: string;
+  /** @deprecated Usa connectionStatus — true solo se link dati recente (equivale a connectionStatus === "live") */
   connected: boolean;
+  connectionStatus: VehicleConnectionStatus;
   /** Raw VIN (17 chars) when present from UDS/CAN */
   vin?: string;
   /** Corgi decode: make, model, year */

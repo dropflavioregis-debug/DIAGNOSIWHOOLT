@@ -60,7 +60,7 @@ bool canSend(uint32_t id, uint8_t len, const uint8_t* data) {
   return twai_transmit(&msg, 0) == ESP_OK;
 }
 
-bool canReceive(uint32_t* id, uint8_t* len, uint8_t* data, size_t dataMaxLen) {
+bool canReceive(uint32_t* id, uint8_t* len, uint8_t* data, size_t dataMaxLen, bool* extd_out) {
   if (!s_started || id == nullptr || len == nullptr || data == nullptr || dataMaxLen < 8)
     return false;
 
@@ -70,6 +70,7 @@ bool canReceive(uint32_t* id, uint8_t* len, uint8_t* data, size_t dataMaxLen) {
 
   *id = msg.identifier;
   *len = msg.data_length_code;
+  if (extd_out) *extd_out = (msg.extd != 0);
   size_t copyLen = (msg.data_length_code < dataMaxLen) ? msg.data_length_code : dataMaxLen;
   std::memcpy(data, msg.data, copyLen);
   return true;

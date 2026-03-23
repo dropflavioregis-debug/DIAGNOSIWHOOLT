@@ -1,8 +1,34 @@
 "use server";
 
 import { getSupabase } from "@/lib/supabase";
-import { queueSnifferStateCommand } from "@/lib/device-sniffer-state";
+import { queueSnifferStateCommand, getSnifferActiveState } from "@/lib/device-sniffer-state";
 import { getFrames, appendFrames, type CanFrame } from "@/lib/can-sniffer-frames-store";
+import { fetchRecentCanFramesFromDb, insertCanFramesToDb } from "@/lib/can-frames-db";
+
+function frameDedupKey(f: CanFrame): string {
+  return `${f.ts}|${f.id}|${f.len}|${(f.data ?? []).join(",")}`;
+}
+
+/** DB (multi-istanza) + memoria (stessa istanza, prima del commit) → log completo. */
+function mergeDbAndMemoryFrames(fromDb: CanFrame[], fromMem: CanFrame[], limit: number): CanFrame[] {
+  if (fromMem.length === 0) return fromDb.slice(-limit);
+  if (fromDb.length === 0) return fromMem.slice(-limit);
+  const seen = new Set<string>();
+  const merged = [...fromDb, ...fromMem];
+  merged.sort((a, b) => {
+    const ta = new Date(a.ts).getTime();
+    const tb = new Date(b.ts).getTime();
+    return ta - tb;
+  });
+  const out: CanFrame[] = [];
+  for (const f of merged) {
+    const k = frameDedupKey(f);
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(f);
+  }
+  return out.slice(-limit);
+}
 
 export async function subscribeSniffer(deviceId: string): Promise<{ ok: boolean; error?: string }> {
   if (!deviceId || typeof deviceId !== "string" || deviceId.trim() === "") {
@@ -31,8 +57,28 @@ export async function getCanSnifferFrames(
   if (!deviceId || typeof deviceId !== "string" || deviceId.trim() === "") {
     return { ok: false, frames: [], error: "device_id required" };
   }
-  const frames = getFrames(deviceId.trim(), limit);
-  return { ok: true, frames };
+  const trimmed = deviceId.trim();
+  const supabase = getSupabase();
+  const fromMem = getFrames(trimmed, limit);
+  if (supabase) {
+    const fromDb = await fetchRecentCanFramesFromDb(supabase, trimmed, limit);
+    const merged = mergeDbAndMemoryFrames(fromDb, fromMem, limit);
+    return { ok: true, frames: merged };
+  }
+  return { ok: true, frames: fromMem };
+}
+
+/** Allineamento UI ↔ DB: stato sniffer come ultimo comando set_sniffer (stesso criterio dell’ESP32). */
+export async function getSnifferSubscriptionState(
+  deviceId: string
+): Promise<{ ok: boolean; active: boolean }> {
+  if (!deviceId || typeof deviceId !== "string" || deviceId.trim() === "") {
+    return { ok: false, active: false };
+  }
+  const supabase = getSupabase();
+  if (!supabase) return { ok: false, active: false };
+  const active = await getSnifferActiveState(supabase, deviceId.trim());
+  return { ok: true, active };
 }
 
 export async function importCanSnifferFrames(
@@ -50,6 +96,14 @@ export async function importCanSnifferFrames(
     len: Number(f.len),
     data: Array.isArray(f.data) ? f.data.slice(0, 8).map(Number) : [],
   }));
-  appendFrames(deviceId.trim(), normalized);
+  const trimmed = deviceId.trim();
+  const supabase = getSupabase();
+  if (supabase) {
+    const ins = await insertCanFramesToDb(supabase, trimmed, normalized);
+    if (ins.error) {
+      return { ok: false, error: ins.error };
+    }
+  }
+  appendFrames(trimmed, normalized);
   return { ok: true, count: normalized.length };
 }

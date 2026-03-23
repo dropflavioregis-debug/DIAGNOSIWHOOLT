@@ -1,8 +1,13 @@
 import { getSupabase } from "@/lib/supabase";
-import type { VehicleInfo, DTCItem, AIMessage, MetricItem } from "@/lib/types";
+import type {
+  VehicleInfo,
+  VehicleConnectionStatus,
+  DTCItem,
+  AIMessage,
+  MetricItem,
+} from "@/lib/types";
 import { getBatteryMetrics } from "@/lib/battery-utils";
 import type { BatteryReading } from "@/lib/types";
-import { VehicleStrip } from "@/components/dashboard/VehicleStrip";
 import { MetricCard } from "@/components/common/MetricCard";
 import { SectionCard } from "@/components/common/SectionCard";
 import { StatusBadge } from "@/components/common/StatusBadge";
@@ -12,6 +17,13 @@ import { CanSnifferPanel } from "@/components/dashboard/CanSnifferPanel";
 import { CellGrid } from "@/components/battery/CellGrid";
 import { EmptyState } from "@/components/common/EmptyState";
 import { RefreshButton } from "@/components/dashboard/RefreshButton";
+import { LiveVehicleStrip } from "@/components/dashboard/LiveVehicleStrip";
+import { DashboardAutoRefresh } from "@/components/dashboard/DashboardAutoRefresh";
+import {
+  fetchLastDataAtForSession,
+  formatLastDataItaliano,
+  resolveConnectionStatus,
+} from "@/lib/dashboard-live";
 
 type SessionRow = {
   id: string;
@@ -25,12 +37,17 @@ type SessionRow = {
   vehicles: { make: string; model: string } | { make: string; model: string }[] | null;
 };
 
-function buildVehicleInfo(session: SessionRow | null): VehicleInfo {
+function buildVehicleInfo(
+  session: SessionRow | null,
+  connectionStatus: VehicleConnectionStatus,
+  lastDataAt: Date | null
+): VehicleInfo {
   if (!session) {
     return {
       name: "Nessun veicolo connesso",
       meta: "Connetti un dispositivo e avvia una sessione",
       connected: false,
+      connectionStatus: "none",
     };
   }
   const decoded = session.vin_decoded;
@@ -41,10 +58,21 @@ function buildVehicleInfo(session: SessionRow | null): VehicleInfo {
     : vehicle
       ? `${vehicle.make} ${vehicle.model}`
       : session.device_id;
+  const live = connectionStatus === "live";
+  let liveSubtitle: string | undefined;
+  if (lastDataAt) {
+    liveSubtitle = `Ultimo dato: ${formatLastDataItaliano(lastDataAt)}`;
+  } else if (connectionStatus === "pending") {
+    liveSubtitle = "In attesa del primo dato dal dispositivo…";
+  } else if (connectionStatus === "offline") {
+    liveSubtitle = "Nessun dato negli ultimi 60 s (veicolo o bus CAN inattivo)";
+  }
   return {
     name,
     meta: `Sessione ${session.id.slice(0, 8)} · ${session.started_at ? new Date(session.started_at).toLocaleString("it-IT") : "—"}`,
-    connected: true,
+    ...(liveSubtitle && { liveSubtitle }),
+    connected: live,
+    connectionStatus,
     ...(session.vin && { vin: session.vin }),
     ...(decoded && { vinDecoded: { make: decoded.make, model: decoded.model, year: decoded.year } }),
   };
@@ -71,6 +99,7 @@ function mapDtcRowToItem(
 export default async function DashboardPage() {
   const supabase = getSupabase();
   let session: SessionRow | null = null;
+  let lastDataAt: Date | null = null;
   let dtcItems: DTCItem[] = [];
   let batteryReading: BatteryReading | null = null;
   let dashboardMetrics: MetricItem[] = [];
@@ -101,6 +130,8 @@ export default async function DashboardPage() {
 
     if (sessionData) {
       session = sessionData as unknown as SessionRow;
+      lastDataAt = await fetchLastDataAtForSession(supabase, session.id, session.device_id);
+
       const rawDtc = session.raw_dtc ?? [];
       if (rawDtc.length > 0 && session.vehicle_id) {
         const { data: dtcRows } = await supabase
@@ -162,12 +193,16 @@ export default async function DashboardPage() {
     }
   }
 
-  const vehicle = buildVehicleInfo(session);
+  const connectionStatus: VehicleConnectionStatus = session
+    ? resolveConnectionStatus({ started_at: session.started_at }, lastDataAt, Date.now())
+    : "none";
+  const vehicle = buildVehicleInfo(session, connectionStatus, lastDataAt);
   const hasData = session !== null;
 
   return (
     <div>
-      <VehicleStrip vehicle={vehicle} />
+      <DashboardAutoRefresh />
+      <LiveVehicleStrip initialVehicle={vehicle} />
 
       <div
         className="flex items-center justify-between"
