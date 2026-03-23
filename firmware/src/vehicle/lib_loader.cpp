@@ -9,7 +9,14 @@ static bool s_fsMounted = false;
 
 bool libLoaderInit() {
   if (s_fsMounted) return true;
+  // First try normal mount, then recover by formatting only on corruption.
   s_fsMounted = LittleFS.begin(false);
+  if (!s_fsMounted)
+    s_fsMounted = LittleFS.begin(true);
+  return s_fsMounted;
+}
+
+bool libLoaderIsMounted() {
   return s_fsMounted;
 }
 

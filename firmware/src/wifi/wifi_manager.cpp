@@ -30,6 +30,7 @@ struct RuntimeStatus {
 };
 
 static RuntimeStatus s_runtime = { false, false, false, 0, "", "" };
+static void handleStatusJson();
 
 static void getMacSuffix(char* out, size_t len) {
   uint8_t mac[6];
@@ -130,6 +131,7 @@ void wifiStartAPAndCaptivePortal() {
 
   s_server = new WebServer(80);
   s_server->on("/", handleRoot);
+  s_server->on("/status.json", HTTP_GET, handleStatusJson);
   s_server->on("/save", HTTP_POST, handleSave);
   s_server->onNotFound([]() {
     if (s_server) s_server->sendHeader("Location", "http://192.168.4.1/", true);
@@ -205,8 +207,8 @@ static void appendLogLine(const char* message) {
   if (s_logCount < LOG_LINES_MAX) s_logCount++;
 }
 
-static void handleStatusJson() {
-  if (!s_reconfigureServer) return;
+static void sendStatusJson(WebServer* server) {
+  if (!server) return;
   char json[8192];
   char* p = json;
   size_t rem = sizeof(json);
@@ -226,7 +228,7 @@ static void handleStatusJson() {
     s_runtime.vehicleId
   );
   if (n < 0 || (size_t)n >= rem) {
-    s_reconfigureServer->send(500, "application/json", "{\"ok\":false}");
+    server->send(500, "application/json", "{\"ok\":false}");
     return;
   }
   p += n;
@@ -241,11 +243,21 @@ static void handleStatusJson() {
   }
   n = snprintf(p, rem, "]}");
   if (n < 0 || (size_t)n >= rem) {
-    s_reconfigureServer->send(500, "application/json", "{\"ok\":false}");
+    server->send(500, "application/json", "{\"ok\":false}");
     return;
   }
-  s_reconfigureServer->sendHeader("Cache-Control", "no-store");
-  s_reconfigureServer->send(200, "application/json", json);
+  server->sendHeader("Cache-Control", "no-store");
+  server->send(200, "application/json", json);
+}
+
+static void handleStatusJson() {
+  if (s_reconfigureServer) {
+    sendStatusJson(s_reconfigureServer);
+    return;
+  }
+  if (s_server) {
+    sendStatusJson(s_server);
+  }
 }
 
 static void handleStartSession() {

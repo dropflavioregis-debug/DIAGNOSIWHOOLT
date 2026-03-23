@@ -7,6 +7,8 @@ namespace ev_diag {
 
 // Mount SPIFFS/LittleFS if not already. Call at startup. Returns true on success.
 bool libLoaderInit();
+// True when LittleFS is mounted and ready.
+bool libLoaderIsMounted();
 
 // Path prefix in filesystem for libs (e.g. /libs/)
 constexpr const char* LIB_PATH_PREFIX = "/libs/";

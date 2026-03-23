@@ -48,11 +48,15 @@ static bool s_lastIngestOk = false;
 static int s_lastIngestFailCode = 0;
 static int s_lastCommandsFailCode = 0;
 static int s_lastSnifferFailCode = 0;
+static bool s_canFallbackStreamLogged = false;
 
 static bool loadConfigFromFilesystemIfNeeded(NvsConfig& cfg) {
   if (configHasWifi(cfg)) return true;
-  if (!LittleFS.begin(false)) return false;
+  if (!libLoaderIsMounted() && !libLoaderInit()) return false;
+
   File f = LittleFS.open("/config.json", "r");
+  if (!f)
+    f = LittleFS.open("/config.default.json", "r");
   if (!f) return false;
   if (f.size() <= 0 || f.size() > 2048) {
     f.close();
@@ -313,6 +317,7 @@ void setup() {
     Serial.println("Config loaded from NVS/FS");
   } else if (!configHasWifi(s_cfg)) {
     Serial.println("No config in NVS/FS");
+    Serial.println("Missing /config.json in LittleFS (run: pio run -t uploadfs)");
   }
 
   int txGpio = config::CAN_TX_GPIO;
@@ -453,8 +458,18 @@ void loop() {
     }
   }
 
-  // CAN Sniffer: legge frame e invia batch al backend quando sniffer attivo
-  if (s_snifferActive && canIsStarted() && s_cfg.server_url[0] != '\0' &&
+  // CAN Sniffer: keep CAN stream alive even without vehicle detect.
+  // If vehicle_id is still unknown, force streaming so dashboard can show live CAN activity.
+  const bool canFallbackStreaming = (!s_snifferActive && s_vehicle_id[0] == '\0');
+  const bool shouldStreamCan = s_snifferActive || (s_vehicle_id[0] == '\0');
+  if (canFallbackStreaming && !s_canFallbackStreamLogged) {
+    Serial.println("CAN stream fallback active");
+    wifiLogEvent("CAN stream fallback active");
+    s_canFallbackStreamLogged = true;
+  } else if (!canFallbackStreaming && s_canFallbackStreamLogged) {
+    s_canFallbackStreamLogged = false;
+  }
+  if (shouldStreamCan && canIsStarted() && s_cfg.server_url[0] != '\0' &&
       (millis() - s_lastSnifferSendMs >= SNIFFER_BATCH_INTERVAL_MS)) {
     s_lastSnifferSendMs = millis();
     size_t n = 0;
