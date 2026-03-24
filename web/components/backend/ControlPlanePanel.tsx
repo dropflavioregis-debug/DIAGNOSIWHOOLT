@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SectionCard } from "@/components/common/SectionCard";
 
 type Profile = { id: string; name: string; category: string };
+type ProfileApiRow = { id: string; name: string; category?: unknown };
 
 export function ControlPlanePanel() {
   const [devices, setDevices] = useState<string[]>([]);
@@ -27,9 +28,16 @@ export function ControlPlanePanel() {
         fetch("/api/protocol-profiles").then((r) => r.json()),
       ]);
       const devList = Array.isArray(devRes.devices) ? devRes.devices : [];
-      const profileListRaw = Array.isArray(profileRes.profiles) ? profileRes.profiles : [];
+      const profileListRaw: unknown[] = Array.isArray(profileRes.profiles) ? profileRes.profiles : [];
+      const isProfileApiRow = (p: unknown): p is ProfileApiRow =>
+        typeof p === "object" &&
+        p !== null &&
+        "id" in p &&
+        typeof p.id === "string" &&
+        "name" in p &&
+        typeof p.name === "string";
       const profileList: Profile[] = profileListRaw
-        .filter((p) => p && typeof p.id === "string" && typeof p.name === "string")
+        .filter(isProfileApiRow)
         .map((p) => ({ id: p.id, name: p.name, category: typeof p.category === "string" ? p.category : "generic" }));
       setDevices(devList);
       setProfiles(profileList);
