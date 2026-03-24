@@ -19,6 +19,7 @@ static const size_t LOG_LINES_MAX = 80;
 static char s_logLines[LOG_LINES_MAX][128];
 static size_t s_logHead = 0;
 static size_t s_logCount = 0;
+static LocalDeviceCommand s_pendingLocalCmd = { false, false, false, false, false, 0, false, false, 0 };
 
 struct RuntimeStatus {
   bool canStarted;
@@ -38,10 +39,11 @@ struct RuntimeStatus {
   char vehicleId[64];
   char lastCanError[96];
   char lastProbeSummary[160];
+  char lastLocalCommand[160];
 };
 
 static RuntimeStatus s_runtime = {
-  false, false, false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", "", "", ""
+  false, false, false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", "", "", "", ""
 };
 // Keep large HTTP response buffers out of loopTask stack.
 static char s_reconfigurePageBuf[4600];
@@ -160,9 +162,20 @@ void wifiStartAPAndCaptivePortal() {
 static const char RECONFIGURE_HTML[] =
   "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>EV-Diagnostic</title></head>"
   "<body><h1>EV-Diagnostic</h1><p>Dispositivo connesso. IP: %s</p>"
-  "<form method=\"POST\" action=\"/start-session\" style=\"margin-bottom:1em\">"
-  "<button type=\"submit\">Avvia connessione con il veicolo</button></form>"
-  "<p><small>Collega il cavo OBD2 all&apos;auto e clicca il pulsante sopra per avviare una nuova sessione diagnostica. I dati appariranno nella dashboard.</small></p>"
+  "<p><small>Pannello locale diretto: i comandi vengono eseguiti subito sul firmware (senza coda dashboard).</small></p>"
+  "<div style=\"display:flex;flex-wrap:wrap;gap:.5em;margin-bottom:1em\">"
+  "<button onclick=\"sendCmd('/cmd/start-session',{})\">Start session</button>"
+  "<button onclick=\"sendCmd('/cmd/set-sniffer',{active:true})\">Sniffer ON</button>"
+  "<button onclick=\"sendCmd('/cmd/set-sniffer',{active:false})\">Sniffer OFF</button>"
+  "</div>"
+  "<div style=\"display:flex;flex-wrap:wrap;gap:.5em;align-items:center;margin-bottom:1em\">"
+  "<label>Bitrate</label>"
+  "<select id=\"bitrateSel\"><option>125</option><option>250</option><option selected>500</option><option>1000</option></select>"
+  "<button onclick=\"sendBitrate()\">Applica bitrate</button>"
+  "<button onclick=\"sendProbe()\">Probe 2s</button>"
+  "<button onclick=\"sendSweep()\">Sweep</button>"
+  "</div>"
+  "<div id=\"cmdBox\" style=\"font-family:monospace;font-size:12px;background:#eef6ff;border:1px solid #c8ddff;padding:.6em;border-radius:6px;margin-bottom:1em\">Nessun comando locale inviato.</div>"
   "<hr style=\"margin:1em 0\">"
   "<h3 style=\"margin:0 0 .5em 0\">Stato runtime</h3>"
   "<div id=\"statusBox\" style=\"font-family:monospace;font-size:12px;white-space:pre-wrap;background:#f4f4f4;border:1px solid #ddd;padding:.6em;border-radius:6px;margin-bottom:1em\">Caricamento stato...</div>"
@@ -196,15 +209,34 @@ static const char RECONFIGURE_HTML[] =
   "'can_restart_count: '+d.can_restart_count,"
   "'last_can_error: '+(d.last_can_error||'-'),"
   "'last_probe_summary: '+(d.last_probe_summary||'-'),"
+  "'last_local_command: '+(d.last_local_command||'-'),"
   "'session_id: '+(d.session_id||'-'),"
   "'vehicle_id: '+(d.vehicle_id||'-')"
   "];"
   "document.getElementById('statusBox').textContent=lines.join('\\n');"
   "const logs=(d.logs||[]);"
   "document.getElementById('logBox').textContent=logs.length?logs.join('\\n'):'Nessun log ancora disponibile.';"
+  "document.getElementById('cmdBox').textContent='Ultimo comando locale: '+(d.last_local_command||'-');"
   "}catch(e){"
   "document.getElementById('statusBox').textContent='Errore lettura stato';"
   "}"
+  "}"
+  "async function sendCmd(path,body){"
+  "const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body||{})});"
+  "const d=await r.json();"
+  "document.getElementById('cmdBox').textContent=JSON.stringify(d);"
+  "setTimeout(refreshStatus,200);"
+  "}"
+  "function sendBitrate(){"
+  "const v=parseInt(document.getElementById('bitrateSel').value,10);"
+  "sendCmd('/cmd/set-bitrate',{bitrate_kbps:v});"
+  "}"
+  "function sendProbe(){"
+  "const v=parseInt(document.getElementById('bitrateSel').value,10);"
+  "sendCmd('/cmd/can-probe',{bitrate_kbps:v,duration_ms:2000});"
+  "}"
+  "function sendSweep(){"
+  "sendCmd('/cmd/can-sweep',{duration_ms:1200});"
   "}"
   "refreshStatus();"
   "setInterval(refreshStatus,1000);"
@@ -244,7 +276,7 @@ static void sendStatusJson(WebServer* server) {
     "\"active_bitrate_kbps\":%d,\"rx_frames_total\":%lu,\"rx_frames_per_sec\":%lu,"
     "\"last_rx_age_ms\":%lu,\"last_can_id\":%lu,\"last_can_dlc\":%u,"
     "\"bus_off_count\":%lu,\"rx_queue_overflow_count\":%lu,\"can_restart_count\":%lu,"
-    "\"last_can_error\":\"%s\",\"last_probe_summary\":\"%s\","
+    "\"last_can_error\":\"%s\",\"last_probe_summary\":\"%s\",\"last_local_command\":\"%s\","
     "\"session_id\":\"%s\",\"vehicle_id\":\"%s\",\"logs\":[",
     WiFi.localIP().toString().c_str(),
     (WiFi.status() == WL_CONNECTED) ? "true" : "false",
@@ -264,6 +296,7 @@ static void sendStatusJson(WebServer* server) {
     (unsigned long)s_runtime.canRestartCount,
     s_runtime.lastCanError,
     s_runtime.lastProbeSummary,
+    s_runtime.lastLocalCommand,
     s_runtime.sessionId,
     s_runtime.vehicleId
   );
@@ -300,17 +333,118 @@ static void handleStatusJson() {
   }
 }
 
-static void handleStartSession() {
+static bool parseJsonBody(WebServer* server, char* outBuf, size_t outLen) {
+  if (!server || !outBuf || outLen == 0) return false;
+  if (!server->hasArg("plain")) return false;
+  const String& plain = server->arg("plain");
+  size_t copyLen = plain.length() < outLen - 1 ? plain.length() : outLen - 1;
+  memcpy(outBuf, plain.c_str(), copyLen);
+  outBuf[copyLen] = '\0';
+  return true;
+}
+
+static void sendCmdResult(WebServer* server, bool ok, const char* message) {
+  if (!server) return;
+  server->sendHeader("Cache-Control", "no-store");
+  server->send(
+    ok ? 200 : 400,
+    "application/json",
+    ok
+      ? String("{\"ok\":true,\"message\":\"") + message + "\"}"
+      : String("{\"ok\":false,\"error\":\"") + message + "\"}"
+  );
+}
+
+static void handleLocalStartSession() {
   if (!s_reconfigureServer) return;
   if (s_reconfigureServer->method() != HTTP_POST) {
     s_reconfigureServer->send(405, "text/plain", "Method Not Allowed");
     return;
   }
-  sessionForceNew();
-  s_reconfigureServer->send(200, "text/html",
-    "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"></head><body>"
-    "<p>Connessione con il veicolo avviata. La prossima trasmissione creer&agrave; una nuova sessione nella dashboard.</p>"
-    "<p><a href=\"/\">Torna alla pagina principale</a></p></body></html>");
+  s_pendingLocalCmd = { true, true, false, false, false, 0, false, false, 0 };
+  wifiSetLastLocalCommandResult("queued start_session");
+  sendCmdResult(s_reconfigureServer, true, "queued start_session");
+}
+
+static void handleLocalSetSniffer() {
+  if (!s_reconfigureServer) return;
+  if (s_reconfigureServer->method() != HTTP_POST) {
+    s_reconfigureServer->send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+  char body[128];
+  bool active = false;
+  if (!parseJsonBody(s_reconfigureServer, body, sizeof(body))) {
+    sendCmdResult(s_reconfigureServer, false, "missing json body");
+    return;
+  }
+  active = (strstr(body, "\"active\":true") != nullptr);
+  s_pendingLocalCmd = { true, false, true, active, false, 0, false, false, 0 };
+  wifiSetLastLocalCommandResult(active ? "queued set_sniffer=true" : "queued set_sniffer=false");
+  sendCmdResult(s_reconfigureServer, true, active ? "queued set_sniffer=true" : "queued set_sniffer=false");
+}
+
+static void handleLocalSetBitrate() {
+  if (!s_reconfigureServer) return;
+  if (s_reconfigureServer->method() != HTTP_POST) {
+    s_reconfigureServer->send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+  char body[160];
+  if (!parseJsonBody(s_reconfigureServer, body, sizeof(body))) {
+    sendCmdResult(s_reconfigureServer, false, "missing json body");
+    return;
+  }
+  int bitrate = 0;
+  const char* key = "\"bitrate_kbps\":";
+  const char* p = strstr(body, key);
+  if (!p) {
+    sendCmdResult(s_reconfigureServer, false, "bitrate_kbps missing");
+    return;
+  }
+  bitrate = atoi(p + strlen(key));
+  s_pendingLocalCmd = { true, false, false, false, true, bitrate, false, false, 0 };
+  wifiSetLastLocalCommandResult("queued set_can_bitrate");
+  sendCmdResult(s_reconfigureServer, true, "queued set_can_bitrate");
+}
+
+static void handleLocalCanProbe() {
+  if (!s_reconfigureServer) return;
+  if (s_reconfigureServer->method() != HTTP_POST) {
+    s_reconfigureServer->send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+  char body[200];
+  if (!parseJsonBody(s_reconfigureServer, body, sizeof(body))) {
+    sendCmdResult(s_reconfigureServer, false, "missing json body");
+    return;
+  }
+  int bitrate = 0;
+  int duration = 2000;
+  const char* kb = strstr(body, "\"bitrate_kbps\":");
+  if (kb) bitrate = atoi(kb + strlen("\"bitrate_kbps\":"));
+  const char* dm = strstr(body, "\"duration_ms\":");
+  if (dm) duration = atoi(dm + strlen("\"duration_ms\":"));
+  s_pendingLocalCmd = { true, false, false, false, true, bitrate, true, false, duration };
+  wifiSetLastLocalCommandResult("queued can_debug_probe");
+  sendCmdResult(s_reconfigureServer, true, "queued can_debug_probe");
+}
+
+static void handleLocalCanSweep() {
+  if (!s_reconfigureServer) return;
+  if (s_reconfigureServer->method() != HTTP_POST) {
+    s_reconfigureServer->send(405, "text/plain", "Method Not Allowed");
+    return;
+  }
+  char body[120];
+  int duration = 1200;
+  if (parseJsonBody(s_reconfigureServer, body, sizeof(body))) {
+    const char* dm = strstr(body, "\"duration_ms\":");
+    if (dm) duration = atoi(dm + strlen("\"duration_ms\":"));
+  }
+  s_pendingLocalCmd = { true, false, false, false, false, 0, false, true, duration };
+  wifiSetLastLocalCommandResult("queued can_bitrate_sweep");
+  sendCmdResult(s_reconfigureServer, true, "queued can_bitrate_sweep");
 }
 
 static void handleReconfigure() {
@@ -334,7 +468,12 @@ void wifiStartReconfigureServer() {
   s_reconfigureServer = new WebServer(80);
   s_reconfigureServer->on("/", handleReconfigurePage);
   s_reconfigureServer->on("/status.json", HTTP_GET, handleStatusJson);
-  s_reconfigureServer->on("/start-session", HTTP_POST, handleStartSession);
+  s_reconfigureServer->on("/start-session", HTTP_POST, handleLocalStartSession);
+  s_reconfigureServer->on("/cmd/start-session", HTTP_POST, handleLocalStartSession);
+  s_reconfigureServer->on("/cmd/set-sniffer", HTTP_POST, handleLocalSetSniffer);
+  s_reconfigureServer->on("/cmd/set-bitrate", HTTP_POST, handleLocalSetBitrate);
+  s_reconfigureServer->on("/cmd/can-probe", HTTP_POST, handleLocalCanProbe);
+  s_reconfigureServer->on("/cmd/can-sweep", HTTP_POST, handleLocalCanSweep);
   s_reconfigureServer->on("/reconfigure", HTTP_POST, handleReconfigure);
   s_reconfigureServer->begin();
   appendLogLine("HTTP reconfigure server started");
@@ -410,6 +549,22 @@ void wifiSetRuntimeStatus(
 
 void wifiLogEvent(const char* message) {
   appendLogLine(message);
+}
+
+bool wifiConsumeLocalCommand(LocalDeviceCommand* outCommand) {
+  if (!outCommand || !s_pendingLocalCmd.valid) return false;
+  *outCommand = s_pendingLocalCmd;
+  s_pendingLocalCmd = { false, false, false, false, false, 0, false, false, 0 };
+  return true;
+}
+
+void wifiSetLastLocalCommandResult(const char* message) {
+  if (message) {
+    strncpy(s_runtime.lastLocalCommand, message, sizeof(s_runtime.lastLocalCommand) - 1);
+    s_runtime.lastLocalCommand[sizeof(s_runtime.lastLocalCommand) - 1] = '\0';
+  } else {
+    s_runtime.lastLocalCommand[0] = '\0';
+  }
 }
 
 }  // namespace ev_diag

@@ -67,6 +67,7 @@ static unsigned long s_lastCanDiagPrintMs = 0;
 static char s_lastCanError[96] = "";
 static char s_lastProbeSummary[160] = "";
 static bool s_prevBusOff = false;
+static uint32_t runCanProbeForBitrate(int kbps, unsigned long durationMs, uint32_t* outFirstId);
 
 static bool loadConfigFromFilesystemIfNeeded(NvsConfig& cfg) {
   if (configHasWifi(cfg)) return true;
@@ -229,6 +230,72 @@ static bool applyCanBitrate(int kbps) {
   return true;
 }
 
+static void runCanProbeCommand(int bitrate, int durationMs) {
+  if (durationMs < 500) durationMs = 500;
+  if (durationMs > 10000) durationMs = 10000;
+  if (!isSupportedCanBitrate(bitrate)) bitrate = canGetSpeedKbps();
+  uint32_t firstId = 0;
+  uint32_t frames = runCanProbeForBitrate(bitrate, (unsigned long)durationMs, &firstId);
+  snprintf(
+    s_lastProbeSummary,
+    sizeof(s_lastProbeSummary),
+    "probe bitrate=%d duration_ms=%d frames=%lu first_id=%lu",
+    bitrate,
+    durationMs,
+    (unsigned long)frames,
+    (unsigned long)firstId
+  );
+  wifiLogEvent(s_lastProbeSummary);
+}
+
+static void runCanSweepCommand(int durationMs) {
+  if (durationMs < 400) durationMs = 400;
+  if (durationMs > 5000) durationMs = 5000;
+  const int sweep[] = { 125, 250, 500, 1000 };
+  char summary[160];
+  int n = snprintf(summary, sizeof(summary), "sweep %dms:", durationMs);
+  for (size_t i = 0; i < 4 && n > 0 && (size_t)n < sizeof(summary); i++) {
+    uint32_t firstId = 0;
+    uint32_t frames = runCanProbeForBitrate(sweep[i], (unsigned long)durationMs, &firstId);
+    int w = snprintf(summary + n, sizeof(summary) - (size_t)n, " %d=%lu", sweep[i], (unsigned long)frames);
+    if (w < 0) break;
+    n += w;
+  }
+  strncpy(s_lastProbeSummary, summary, sizeof(s_lastProbeSummary) - 1);
+  s_lastProbeSummary[sizeof(s_lastProbeSummary) - 1] = '\0';
+  wifiLogEvent(s_lastProbeSummary);
+}
+
+static void executeLocalDeviceCommand(const LocalDeviceCommand& cmd) {
+  if (cmd.startSession) {
+    sessionForceNew();
+    wifiSetLastLocalCommandResult("ok start_session");
+    wifiLogEvent("Local command: start_session");
+  }
+  if (cmd.hasSnifferActive) {
+    s_snifferActive = cmd.snifferActive;
+    wifiSetLastLocalCommandResult(cmd.snifferActive ? "ok set_sniffer=true" : "ok set_sniffer=false");
+    wifiLogEvent(cmd.snifferActive ? "Local command: set_sniffer=true" : "Local command: set_sniffer=false");
+  }
+  if (cmd.hasBitrate && cmd.bitrateKbps > 0) {
+    if (applyCanBitrate(cmd.bitrateKbps)) {
+      wifiSetLastLocalCommandResult("ok set_can_bitrate");
+      wifiLogEvent("Local command: set_can_bitrate OK");
+    } else {
+      wifiSetLastLocalCommandResult("fail set_can_bitrate");
+      wifiLogEvent("Local command: set_can_bitrate FAIL");
+    }
+  }
+  if (cmd.runProbe) {
+    runCanProbeCommand(cmd.bitrateKbps, cmd.durationMs > 0 ? cmd.durationMs : 2000);
+    wifiSetLastLocalCommandResult("ok can_debug_probe");
+  }
+  if (cmd.runSweep) {
+    runCanSweepCommand(cmd.durationMs > 0 ? cmd.durationMs : 1200);
+    wifiSetLastLocalCommandResult("ok can_bitrate_sweep");
+  }
+}
+
 static uint32_t runCanProbeForBitrate(int kbps, unsigned long durationMs, uint32_t* outFirstId) {
   if (outFirstId) *outFirstId = 0;
   if (!applyCanBitrate(kbps)) return 0;
@@ -386,6 +453,7 @@ static void tryRunAssignedProfile() {
 // Esegue i comandi ricevuti dalla webapp (risposta GET /api/device/commands).
 static void processDeviceCommands(const char* json) {
   if (!json) return;
+  const bool prevSniffer = s_snifferActive;
   ParsedDeviceCommands parsed = {};
   if (parseDeviceCommandsJson(json, &parsed)) {
     for (size_t i = 0; i < parsed.count; i++) {
@@ -419,40 +487,10 @@ static void processDeviceCommands(const char* json) {
       }
     }
   }
-  if (strstr(json, "\"start_session\"") != nullptr) {
-    sessionForceNew();
-    Serial.println("Command: start_session");
-    wifiLogEvent("Command received: start_session");
-  }
-  // sniffer_active dalla dashboard (subscribe CAN Sniffer)
-  if (strstr(json, "\"sniffer_active\":true") != nullptr || strstr(json, "\"active\":true") != nullptr) {
-    s_snifferActive = true;
-    wifiLogEvent("Command received: sniffer_active=true");
-  } else if (strstr(json, "\"sniffer_active\"") != nullptr || strstr(json, "\"active\"") != nullptr) {
-    s_snifferActive = false;
-    wifiLogEvent("Command received: sniffer_active=false");
-  }
-  if (strstr(json, "\"read_vin\"") != nullptr) {
-    if (readVin(uds::DID_VIN, s_vin, sizeof(s_vin))) {
-      Serial.print("Command VIN: ");
-      Serial.println(s_vin);
-      wifiLogEvent("Command received: read_vin OK");
-      (void)buildAndPostIngest();
-    } else {
-      wifiLogEvent("Command received: read_vin FAIL");
-    }
-  }
-  if (strstr(json, "\"read_dtc\"") != nullptr) {
-    uint8_t dtcBuf[64];
-    size_t dtcLen = 0;
-    if (readDTC(dtcBuf, sizeof(dtcBuf), &dtcLen)) {
-      char line[72];
-      snprintf(line, sizeof(line), "Command received: read_dtc OK len=%u", (unsigned)dtcLen);
-      wifiLogEvent(line);
-      (void)buildAndPostIngest();
-    } else {
-      wifiLogEvent("Command received: read_dtc FAIL");
-    }
+  if (strstr(json, "\"sniffer_active\":true") != nullptr) s_snifferActive = true;
+  else if (strstr(json, "\"sniffer_active\":false") != nullptr) s_snifferActive = false;
+  if (s_snifferActive != prevSniffer) {
+    wifiLogEvent(s_snifferActive ? "State update: sniffer_active=true" : "State update: sniffer_active=false");
   }
   if (strstr(json, "\"set_can_bitrate\"") != nullptr) {
     int bitrate = 0;
@@ -471,50 +509,16 @@ static void processDeviceCommands(const char* json) {
     }
   }
   if (strstr(json, "\"can_debug_probe\"") != nullptr) {
-    int durationMs = 2000;
-    (void)parseIntJsonField(json, "\"duration_ms\":", &durationMs);
-    if (durationMs < 500) durationMs = 500;
-    if (durationMs > 10000) durationMs = 10000;
     int bitrate = canGetSpeedKbps();
+    int durationMs = 2000;
     (void)parseIntJsonField(json, "\"bitrate_kbps\":", &bitrate);
-    if (!isSupportedCanBitrate(bitrate)) bitrate = canGetSpeedKbps();
-    uint32_t firstId = 0;
-    uint32_t frames = runCanProbeForBitrate(bitrate, (unsigned long)durationMs, &firstId);
-    snprintf(
-      s_lastProbeSummary,
-      sizeof(s_lastProbeSummary),
-      "probe bitrate=%d duration_ms=%d frames=%lu first_id=%lu",
-      bitrate,
-      durationMs,
-      (unsigned long)frames,
-      (unsigned long)firstId
-    );
-    wifiLogEvent(s_lastProbeSummary);
+    (void)parseIntJsonField(json, "\"duration_ms\":", &durationMs);
+    runCanProbeCommand(bitrate, durationMs);
   }
   if (strstr(json, "\"can_bitrate_sweep\"") != nullptr) {
     int durationMs = 1200;
     (void)parseIntJsonField(json, "\"duration_ms\":", &durationMs);
-    if (durationMs < 400) durationMs = 400;
-    if (durationMs > 5000) durationMs = 5000;
-    const int sweep[] = { 125, 250, 500, 1000 };
-    char summary[160];
-    int n = snprintf(summary, sizeof(summary), "sweep %dms:", durationMs);
-    for (size_t i = 0; i < 4 && n > 0 && (size_t)n < sizeof(summary); i++) {
-      uint32_t firstId = 0;
-      uint32_t frames = runCanProbeForBitrate(sweep[i], (unsigned long)durationMs, &firstId);
-      int w = snprintf(
-        summary + n,
-        sizeof(summary) - (size_t)n,
-        " %d=%lu",
-        sweep[i],
-        (unsigned long)frames
-      );
-      if (w < 0) break;
-      n += w;
-    }
-    strncpy(s_lastProbeSummary, summary, sizeof(s_lastProbeSummary) - 1);
-    s_lastProbeSummary[sizeof(s_lastProbeSummary) - 1] = '\0';
-    wifiLogEvent(s_lastProbeSummary);
+    runCanSweepCommand(durationMs);
   }
   // Estensibile: altri comandi es. "reboot", "sync_config" ecc.
 }
@@ -571,6 +575,8 @@ void setup() {
   Serial.print("Reconfigure: http://");
   Serial.println(WiFi.localIP());
   wifiStartReconfigureServer();
+  sessionForceNew();
+  wifiLogEvent("Auto session enabled: force new session");
 
   if (canIsStarted() && s_cfg.server_url[0] != '\0') {
     CanIdList ids;
@@ -617,6 +623,8 @@ void loop() {
       s_lastWifiRetryMs = millis();
       if (wifiConnectSTA(s_cfg)) {
         wifiLogEvent("WiFi reconnected");
+        sessionForceNew();
+        wifiLogEvent("Auto session on reconnect");
       }
     }
     delay(100);
@@ -624,6 +632,10 @@ void loop() {
   }
 
   wifiReconfigureLoop();
+  LocalDeviceCommand localCmd = {};
+  if (wifiConsumeLocalCommand(&localCmd)) {
+    executeLocalDeviceCommand(localCmd);
+  }
 
   if (s_cfg.server_url[0] != '\0' && (millis() - s_lastIngestMs >= INGEST_INTERVAL_MS)) {
     s_lastIngestMs = millis();

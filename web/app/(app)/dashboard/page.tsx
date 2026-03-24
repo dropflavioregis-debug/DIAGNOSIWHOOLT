@@ -233,22 +233,22 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      <SectionCard title="Operazioni live" action={null}>
+        <LiveOperationsPanel
+          connectionStatus={connectionStatus}
+          hasActiveSession={hasActiveSession}
+          deviceId={session?.device_id ?? null}
+          deviceIds={deviceIds}
+        />
+      </SectionCard>
+
       {!hasData ? (
         <EmptyState
           title="Nessun dato disponibile"
-          description="Connetti un veicolo e avvia una sessione diagnostica per vedere metriche, DTC e analisi."
+          description="Puoi usare Operazioni live per inviare comandi al dispositivo anche prima del primo dato."
         />
       ) : (
         <>
-          <SectionCard title="Operazioni live" action={null}>
-            <LiveOperationsPanel
-              connectionStatus={connectionStatus}
-              hasActiveSession={hasActiveSession}
-              deviceId={session?.device_id ?? null}
-              deviceIds={deviceIds}
-            />
-          </SectionCard>
-
           {dashboardMetrics.length > 0 && (
             <div
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"

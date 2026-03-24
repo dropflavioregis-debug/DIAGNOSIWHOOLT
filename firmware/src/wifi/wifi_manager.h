@@ -6,6 +6,18 @@
 
 namespace ev_diag {
 
+struct LocalDeviceCommand {
+  bool valid;
+  bool startSession;
+  bool hasSnifferActive;
+  bool snifferActive;
+  bool hasBitrate;
+  int bitrateKbps;
+  bool runProbe;
+  bool runSweep;
+  int durationMs;
+};
+
 // Try to connect in STA mode using config. Returns true when connected.
 // Call in loop for retry with backoff if disconnected.
 bool wifiConnectSTA(const NvsConfig& cfg);
@@ -55,6 +67,12 @@ void wifiSetRuntimeStatus(
 
 // Append one event line to local runtime log ring buffer.
 void wifiLogEvent(const char* message);
+
+// Pop one local command queued from device page. Returns true if a command was consumed.
+bool wifiConsumeLocalCommand(LocalDeviceCommand* outCommand);
+
+// Update local command status shown in status.json/device page.
+void wifiSetLastLocalCommandResult(const char* message);
 
 }  // namespace ev_diag
 

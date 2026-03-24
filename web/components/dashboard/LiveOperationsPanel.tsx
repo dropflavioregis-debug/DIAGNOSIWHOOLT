@@ -38,8 +38,8 @@ export function LiveOperationsPanel({
     return "";
   }, [deviceId, selectedDeviceId]);
 
-  const isConnected = connectionStatus === "live" || connectionStatus === "pending";
   const canRunCommands = effectiveDeviceId.length > 0;
+  const isConnected = canRunCommands;
 
   async function runAction(
     actionKey: string,
@@ -101,8 +101,10 @@ export function LiveOperationsPanel({
             : connectionStatus === "pending"
               ? "Connesso - attesa dati"
               : connectionStatus === "offline"
-                ? "Offline"
-                : "Nessuna sessione"}
+                ? "Connesso - nessun dato recente"
+                : canRunCommands
+                  ? "Connesso - comandi disponibili"
+                  : "Nessuna sessione"}
         </span>
       </div>
 
@@ -256,7 +258,7 @@ export function LiveOperationsPanel({
       </div>
 
       <p className="text-[11px]" style={{ color: "var(--color-text-tertiary)" }}>
-        I comandi vengono eseguiti dal firmware ESP32 al prossimo polling (circa 5 s); i dati si aggiornano automaticamente in dashboard.
+        I comandi vengono inviati al firmware ESP32; se non vedi dati live puoi comunque eseguire operazioni manuali.
       </p>
       {message && (
         <p className="text-[11px]" style={{ color: "var(--teal-600)" }}>
