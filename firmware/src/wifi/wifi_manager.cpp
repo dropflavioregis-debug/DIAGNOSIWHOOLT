@@ -43,6 +43,9 @@ struct RuntimeStatus {
 static RuntimeStatus s_runtime = {
   false, false, false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", "", "", ""
 };
+// Keep large HTTP response buffers out of loopTask stack.
+static char s_reconfigurePageBuf[4600];
+static char s_statusJsonBuf[8192];
 static void handleStatusJson();
 
 static void getMacSuffix(char* out, size_t len) {
@@ -210,9 +213,8 @@ static const char RECONFIGURE_HTML[] =
 
 static void handleReconfigurePage() {
   if (!s_reconfigureServer) return;
-  char buf[4600];
-  snprintf(buf, sizeof(buf), RECONFIGURE_HTML, WiFi.localIP().toString().c_str());
-  s_reconfigureServer->send(200, "text/html", buf);
+  snprintf(s_reconfigurePageBuf, sizeof(s_reconfigurePageBuf), RECONFIGURE_HTML, WiFi.localIP().toString().c_str());
+  s_reconfigureServer->send(200, "text/html", s_reconfigurePageBuf);
 }
 
 static void appendLogLine(const char* message) {
@@ -233,9 +235,8 @@ static void appendLogLine(const char* message) {
 
 static void sendStatusJson(WebServer* server) {
   if (!server) return;
-  char json[8192];
-  char* p = json;
-  size_t rem = sizeof(json);
+  char* p = s_statusJsonBuf;
+  size_t rem = sizeof(s_statusJsonBuf);
   int n = snprintf(
     p, rem,
     "{\"ok\":true,\"ip\":\"%s\",\"wifi_connected\":%s,\"rssi\":%d,"
@@ -286,7 +287,7 @@ static void sendStatusJson(WebServer* server) {
     return;
   }
   server->sendHeader("Cache-Control", "no-store");
-  server->send(200, "application/json", json);
+  server->send(200, "application/json", s_statusJsonBuf);
 }
 
 static void handleStatusJson() {
