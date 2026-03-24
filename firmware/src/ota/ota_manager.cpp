@@ -3,30 +3,48 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <Update.h>
+#include <ArduinoJson.h>
 #include <cstring>
 
 namespace ev_diag {
 
-// Minimal JSON parse: find "version":"...", "url":"..."
-static bool parseFirmwareManifest(const char* json, size_t len, char* outVersion, size_t versionLen, char* outUrl, size_t urlLen) {
-  const char* vkey = "\"version\":\"";
-  const char* v = strstr(json, vkey);
-  if (!v) return false;
-  v += strlen(vkey);
-  const char* ve = strchr(v, '"');
-  if (!ve || (size_t)(ve - v) >= versionLen) return false;
-  memcpy(outVersion, v, ve - v);
-  outVersion[ve - v] = '\0';
+struct FirmwareManifest {
+  char version[24];
+  char url[256];
+  char md5[40];
+  char minSupportedVersion[24];
+  bool compatible;
+};
 
-  const char* ukey = "\"url\":\"";
-  const char* u = strstr(json, ukey);
-  if (!u) return false;
-  u += strlen(ukey);
-  const char* ue = strchr(u, '"');
-  if (!ue || (size_t)(ue - u) >= urlLen) return false;
-  memcpy(outUrl, u, ue - u);
-  outUrl[ue - u] = '\0';
-  return outUrl[0] != '\0';
+static bool parseFirmwareManifest(const char* json, size_t len, FirmwareManifest* out) {
+  if (!json || !out || len == 0) return false;
+  out->version[0] = '\0';
+  out->url[0] = '\0';
+  out->md5[0] = '\0';
+  out->minSupportedVersion[0] = '\0';
+  out->compatible = true;
+  DynamicJsonDocument doc(1536);
+  if (deserializeJson(doc, json, len) != DeserializationError::Ok) return false;
+  const char* version = doc["version"] | "";
+  const char* url = doc["url"] | "";
+  const char* md5 = doc["md5"] | "";
+  const char* minSupportedVersion = doc["min_supported_version"] | "";
+  bool compatible = doc["compatible"].isNull() ? true : (bool)doc["compatible"];
+  if (!version || version[0] == '\0' || !url || url[0] == '\0') return false;
+  strncpy(out->version, version, sizeof(out->version) - 1);
+  out->version[sizeof(out->version) - 1] = '\0';
+  strncpy(out->url, url, sizeof(out->url) - 1);
+  out->url[sizeof(out->url) - 1] = '\0';
+  if (md5 && md5[0] != '\0') {
+    strncpy(out->md5, md5, sizeof(out->md5) - 1);
+    out->md5[sizeof(out->md5) - 1] = '\0';
+  }
+  if (minSupportedVersion && minSupportedVersion[0] != '\0') {
+    strncpy(out->minSupportedVersion, minSupportedVersion, sizeof(out->minSupportedVersion) - 1);
+    out->minSupportedVersion[sizeof(out->minSupportedVersion) - 1] = '\0';
+  }
+  out->compatible = compatible;
+  return true;
 }
 
 bool isVersionNewer(const char* current, const char* remote) {
@@ -35,7 +53,7 @@ bool isVersionNewer(const char* current, const char* remote) {
   return c > 0;
 }
 
-OtaResult otaCheckAndUpdate(const char* serverUrl, const char* apiKey) {
+OtaResult otaCheckAndUpdate(const char* serverUrl, const char* apiKey, const char* deviceId, const char* channel) {
   OtaResult r = { false, false, false, nullptr };
   if (!WiFi.isConnected() || !serverUrl || serverUrl[0] == '\0') {
     r.message = "WiFi or server not configured";
@@ -45,6 +63,16 @@ OtaResult otaCheckAndUpdate(const char* serverUrl, const char* apiKey) {
   String base = serverUrl;
   while (base.endsWith("/")) base.remove(base.length() - 1);
   String manifestUrl = base + config::API_FIRMWARE_LATEST;
+  if (deviceId && deviceId[0] != '\0') {
+    manifestUrl += "?device_id=";
+    manifestUrl += deviceId;
+    manifestUrl += "&current_version=";
+    manifestUrl += FIRMWARE_VERSION;
+    if (channel && channel[0] != '\0') {
+      manifestUrl += "&channel=";
+      manifestUrl += channel;
+    }
+  }
 
   HTTPClient http;
   http.begin(manifestUrl);
@@ -65,20 +93,23 @@ OtaResult otaCheckAndUpdate(const char* serverUrl, const char* apiKey) {
   http.end();
   r.checked = true;
 
-  char remoteVersion[24];
-  char binUrl[256];
-  if (!parseFirmwareManifest(payload.c_str(), payload.length(), remoteVersion, sizeof(remoteVersion), binUrl, sizeof(binUrl))) {
+  FirmwareManifest manifest = {};
+  if (!parseFirmwareManifest(payload.c_str(), payload.length(), &manifest)) {
     r.message = "Invalid manifest";
     return r;
   }
+  if (!manifest.compatible) {
+    r.message = "Update blocked (min_supported_version)";
+    return r;
+  }
 
-  if (!isVersionNewer(FIRMWARE_VERSION, remoteVersion)) {
+  if (!isVersionNewer(FIRMWARE_VERSION, manifest.version)) {
     r.message = "Already up to date";
     return r;
   }
 
   HTTPClient httpBin;
-  httpBin.begin(binUrl);
+  httpBin.begin(manifest.url);
   httpBin.setTimeout(60000);
   int getCode = httpBin.GET();
   if (getCode != 200) {
@@ -96,6 +127,9 @@ OtaResult otaCheckAndUpdate(const char* serverUrl, const char* apiKey) {
   }
 
   if (!Update.begin((size_t)len, U_FLASH)) {
+  if (manifest.md5[0] != '\0') {
+    Update.setMD5(manifest.md5);
+  }
     r.error = true;
     r.message = "Update begin failed";
     httpBin.end();

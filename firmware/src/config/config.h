@@ -29,6 +29,7 @@ constexpr const char* API_INGEST = "/api/ingest";
 constexpr const char* API_VEHICLE_DETECT = "/api/vehicle/detect";
 constexpr const char* API_LIBS_PREFIX = "/api/libs/";
 constexpr const char* API_FIRMWARE_LATEST = "/api/firmware/latest";
+constexpr const char* API_PROTOCOL_PROFILE_ACTIVE = "/api/protocol-profiles/active";
 
 // OTA: check for update every 24 hours
 constexpr unsigned long OTA_CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000;

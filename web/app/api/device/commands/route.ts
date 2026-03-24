@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase";
 import { getSnifferActiveState } from "@/lib/device-sniffer-state";
+import { auditRuntime, logDeviceUpdateEvent } from "@/lib/control-plane";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,8 @@ export async function GET(request: NextRequest) {
     const commands = (rows ?? []).map((r) => ({
       id: r.id,
       command: r.command,
+      schema_version: (r.payload as { schema_version?: number } | null)?.schema_version ?? 1,
+      ttl_ms: (r.payload as { ttl_ms?: number } | null)?.ttl_ms ?? 60_000,
       payload: r.payload ?? undefined,
     }));
 
@@ -44,6 +47,15 @@ export async function GET(request: NextRequest) {
         .from("device_commands")
         .update({ acknowledged_at: new Date().toISOString() })
         .in("id", commands.map((c) => c.id));
+      await auditRuntime(deviceId.trim(), "firmware", "commands_acknowledged", {
+        count: commands.length,
+        command_ids: commands.map((c) => c.id),
+      });
+      for (const cmd of commands) {
+        await logDeviceUpdateEvent(deviceId.trim(), "command_ack", "ok", null, {
+          command: cmd.command,
+        });
+      }
     }
 
     const sniffer_active = await getSnifferActiveState(supabase, deviceId.trim());
@@ -104,7 +116,11 @@ export async function POST(request: NextRequest) {
       .insert({
         device_id: deviceId,
         command,
-        payload: body.payload ?? null,
+        payload: {
+          schema_version: 1,
+          ttl_ms: 60_000,
+          ...(body.payload && typeof body.payload === "object" ? (body.payload as Record<string, unknown>) : {}),
+        },
       })
       .select("id, command, created_at")
       .single();
@@ -112,6 +128,11 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
+
+    await auditRuntime(deviceId, "api", "queue_command", {
+      command,
+      payload: body.payload ?? null,
+    });
 
     return NextResponse.json({
       ok: true,

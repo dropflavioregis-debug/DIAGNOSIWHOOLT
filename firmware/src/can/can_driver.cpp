@@ -6,6 +6,9 @@
 namespace ev_diag {
 
 static bool s_started = false;
+static int s_txGpio = -1;
+static int s_rxGpio = -1;
+static int s_speedKbps = 0;
 
 bool canInit(int txGpio, int rxGpio, int speedKbps) {
   if (s_started) return true;
@@ -45,6 +48,9 @@ bool canInit(int txGpio, int rxGpio, int speedKbps) {
     return false;
   }
   s_started = true;
+  s_txGpio = txGpio;
+  s_rxGpio = rxGpio;
+  s_speedKbps = speedKbps;
   return true;
 }
 
@@ -85,6 +91,34 @@ void canStop() {
 
 bool canIsStarted() {
   return s_started;
+}
+
+int canGetSpeedKbps() {
+  return s_speedKbps;
+}
+
+bool canReconfigureSpeed(int speedKbps) {
+  if (s_txGpio < 0 || s_rxGpio < 0) return false;
+  if (s_started) canStop();
+  return canInit(s_txGpio, s_rxGpio, speedKbps);
+}
+
+bool canGetStatus(CanStatus* outStatus) {
+  if (!outStatus || !s_started) return false;
+  twai_status_info_t statusInfo = {};
+  if (twai_get_status_info(&statusInfo) != ESP_OK) return false;
+  outStatus->started = s_started;
+  outStatus->speedKbps = s_speedKbps;
+  outStatus->rxMissCount = statusInfo.rx_missed_count;
+  outStatus->txErrorCounter = statusInfo.tx_error_counter;
+  outStatus->rxErrorCounter = statusInfo.rx_error_counter;
+  outStatus->txFailedCount = statusInfo.tx_failed_count;
+  outStatus->rxOverrunCount = statusInfo.rx_overrun_count;
+  outStatus->arbLostCount = statusInfo.arb_lost_count;
+  outStatus->busErrorCount = statusInfo.bus_error_count;
+  outStatus->busOff = (statusInfo.state == TWAI_STATE_BUS_OFF);
+  outStatus->recovering = (statusInfo.state == TWAI_STATE_RECOVERING);
+  return true;
 }
 
 }  // namespace ev_diag

@@ -25,11 +25,24 @@ struct RuntimeStatus {
   bool snifferActive;
   bool lastIngestOk;
   uint32_t lastIngestAgeMs;
+  uint32_t rxFramesTotal;
+  uint32_t rxFramesPerSec;
+  uint32_t lastRxAgeMs;
+  uint32_t lastCanId;
+  uint8_t lastCanDlc;
+  uint32_t busOffCount;
+  uint32_t rxQueueOverflowCount;
+  uint32_t canRestartCount;
+  int activeBitrateKbps;
   char sessionId[64];
   char vehicleId[64];
+  char lastCanError[96];
+  char lastProbeSummary[160];
 };
 
-static RuntimeStatus s_runtime = { false, false, false, 0, "", "" };
+static RuntimeStatus s_runtime = {
+  false, false, false, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "", "", "", ""
+};
 static void handleStatusJson();
 
 static void getMacSuffix(char* out, size_t len) {
@@ -169,6 +182,17 @@ static const char RECONFIGURE_HTML[] =
   "'sniffer_active: '+d.sniffer_active,"
   "'last_ingest_ok: '+d.last_ingest_ok,"
   "'last_ingest_age_ms: '+d.last_ingest_age_ms,"
+  "'active_bitrate_kbps: '+d.active_bitrate_kbps,"
+  "'rx_frames_total: '+d.rx_frames_total,"
+  "'rx_frames_per_sec: '+d.rx_frames_per_sec,"
+  "'last_rx_age_ms: '+d.last_rx_age_ms,"
+  "'last_can_id: '+d.last_can_id,"
+  "'last_can_dlc: '+d.last_can_dlc,"
+  "'bus_off_count: '+d.bus_off_count,"
+  "'rx_queue_overflow_count: '+d.rx_queue_overflow_count,"
+  "'can_restart_count: '+d.can_restart_count,"
+  "'last_can_error: '+(d.last_can_error||'-'),"
+  "'last_probe_summary: '+(d.last_probe_summary||'-'),"
   "'session_id: '+(d.session_id||'-'),"
   "'vehicle_id: '+(d.vehicle_id||'-')"
   "];"
@@ -216,6 +240,10 @@ static void sendStatusJson(WebServer* server) {
     p, rem,
     "{\"ok\":true,\"ip\":\"%s\",\"wifi_connected\":%s,\"rssi\":%d,"
     "\"can_started\":%s,\"sniffer_active\":%s,\"last_ingest_ok\":%s,\"last_ingest_age_ms\":%lu,"
+    "\"active_bitrate_kbps\":%d,\"rx_frames_total\":%lu,\"rx_frames_per_sec\":%lu,"
+    "\"last_rx_age_ms\":%lu,\"last_can_id\":%lu,\"last_can_dlc\":%u,"
+    "\"bus_off_count\":%lu,\"rx_queue_overflow_count\":%lu,\"can_restart_count\":%lu,"
+    "\"last_can_error\":\"%s\",\"last_probe_summary\":\"%s\","
     "\"session_id\":\"%s\",\"vehicle_id\":\"%s\",\"logs\":[",
     WiFi.localIP().toString().c_str(),
     (WiFi.status() == WL_CONNECTED) ? "true" : "false",
@@ -224,6 +252,17 @@ static void sendStatusJson(WebServer* server) {
     s_runtime.snifferActive ? "true" : "false",
     s_runtime.lastIngestOk ? "true" : "false",
     (unsigned long)s_runtime.lastIngestAgeMs,
+    s_runtime.activeBitrateKbps,
+    (unsigned long)s_runtime.rxFramesTotal,
+    (unsigned long)s_runtime.rxFramesPerSec,
+    (unsigned long)s_runtime.lastRxAgeMs,
+    (unsigned long)s_runtime.lastCanId,
+    (unsigned)s_runtime.lastCanDlc,
+    (unsigned long)s_runtime.busOffCount,
+    (unsigned long)s_runtime.rxQueueOverflowCount,
+    (unsigned long)s_runtime.canRestartCount,
+    s_runtime.lastCanError,
+    s_runtime.lastProbeSummary,
     s_runtime.sessionId,
     s_runtime.vehicleId
   );
@@ -316,12 +355,32 @@ void wifiSetRuntimeStatus(
   const char* sessionId,
   const char* vehicleId,
   bool lastIngestOk,
-  uint32_t lastIngestAgeMs
+  uint32_t lastIngestAgeMs,
+  uint32_t rxFramesTotal,
+  uint32_t rxFramesPerSec,
+  uint32_t lastRxAgeMs,
+  uint32_t lastCanId,
+  uint8_t lastCanDlc,
+  uint32_t busOffCount,
+  uint32_t rxQueueOverflowCount,
+  uint32_t canRestartCount,
+  int activeBitrateKbps,
+  const char* lastCanError,
+  const char* lastProbeSummary
 ) {
   s_runtime.canStarted = canStarted;
   s_runtime.snifferActive = snifferActive;
   s_runtime.lastIngestOk = lastIngestOk;
   s_runtime.lastIngestAgeMs = lastIngestAgeMs;
+  s_runtime.rxFramesTotal = rxFramesTotal;
+  s_runtime.rxFramesPerSec = rxFramesPerSec;
+  s_runtime.lastRxAgeMs = lastRxAgeMs;
+  s_runtime.lastCanId = lastCanId;
+  s_runtime.lastCanDlc = lastCanDlc;
+  s_runtime.busOffCount = busOffCount;
+  s_runtime.rxQueueOverflowCount = rxQueueOverflowCount;
+  s_runtime.canRestartCount = canRestartCount;
+  s_runtime.activeBitrateKbps = activeBitrateKbps;
   if (sessionId) {
     strncpy(s_runtime.sessionId, sessionId, sizeof(s_runtime.sessionId) - 1);
     s_runtime.sessionId[sizeof(s_runtime.sessionId) - 1] = '\0';
@@ -333,6 +392,18 @@ void wifiSetRuntimeStatus(
     s_runtime.vehicleId[sizeof(s_runtime.vehicleId) - 1] = '\0';
   } else {
     s_runtime.vehicleId[0] = '\0';
+  }
+  if (lastCanError) {
+    strncpy(s_runtime.lastCanError, lastCanError, sizeof(s_runtime.lastCanError) - 1);
+    s_runtime.lastCanError[sizeof(s_runtime.lastCanError) - 1] = '\0';
+  } else {
+    s_runtime.lastCanError[0] = '\0';
+  }
+  if (lastProbeSummary) {
+    strncpy(s_runtime.lastProbeSummary, lastProbeSummary, sizeof(s_runtime.lastProbeSummary) - 1);
+    s_runtime.lastProbeSummary[sizeof(s_runtime.lastProbeSummary) - 1] = '\0';
+  } else {
+    s_runtime.lastProbeSummary[0] = '\0';
   }
 }
 

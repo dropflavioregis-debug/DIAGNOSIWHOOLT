@@ -28,6 +28,10 @@ bool getLibJson(const char* serverUrl, const char* apiKey, const char* vehicleId
 bool getDeviceCommands(const char* serverUrl, const char* apiKey, const char* deviceId,
                        char* outBuf, size_t outLen);
 
+// GET /api/protocol-profiles/active?device_id=... — active runtime profile for device.
+bool getActiveProtocolProfile(const char* serverUrl, const char* apiKey, const char* deviceId,
+                              char* outBuf, size_t outLen);
+
 // CAN sniffer: one frame for postCanSnifferStream
 struct CanSnifferFrame {
   uint32_t id;

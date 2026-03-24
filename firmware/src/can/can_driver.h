@@ -6,6 +6,20 @@
 
 namespace ev_diag {
 
+struct CanStatus {
+  bool started;
+  int speedKbps;
+  uint32_t rxMissCount;
+  uint32_t txErrorCounter;
+  uint32_t rxErrorCounter;
+  uint32_t txFailedCount;
+  uint32_t rxOverrunCount;
+  uint32_t arbLostCount;
+  uint32_t busErrorCount;
+  bool busOff;
+  bool recovering;
+};
+
 // Initialize TWAI with given TX/RX GPIO and speed in kbps. Returns true on success.
 bool canInit(int txGpio, int rxGpio, int speedKbps);
 
@@ -21,6 +35,15 @@ void canStop();
 
 // True if driver was started successfully.
 bool canIsStarted();
+
+// Current configured CAN speed in kbps (0 if not configured yet).
+int canGetSpeedKbps();
+
+// Restart TWAI with same TX/RX and a new speed.
+bool canReconfigureSpeed(int speedKbps);
+
+// Fill status info from TWAI driver. Returns false when CAN is not started.
+bool canGetStatus(CanStatus* outStatus);
 
 }  // namespace ev_diag
 

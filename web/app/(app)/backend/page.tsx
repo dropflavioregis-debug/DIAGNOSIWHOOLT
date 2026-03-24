@@ -1,5 +1,6 @@
 import { getSupabase } from "@/lib/supabase";
 import { SectionCard } from "@/components/common/SectionCard";
+import { ControlPlanePanel } from "@/components/backend/ControlPlanePanel";
 
 type ApiRow = {
   area: string;
@@ -87,19 +88,26 @@ export default async function BackendPage() {
   let vehiclesCount = 0;
   let sessionsCount = 0;
   let pendingCommands = 0;
+  let updateEvents24h = 0;
 
   if (supabase) {
-    const [vehiclesRes, sessionsRes, commandsRes] = await Promise.all([
+    const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const [vehiclesRes, sessionsRes, commandsRes, updatesRes] = await Promise.all([
       supabase.from("vehicles").select("id", { count: "exact", head: true }),
       supabase.from("sessions").select("id", { count: "exact", head: true }),
       supabase
         .from("device_commands")
         .select("id", { count: "exact", head: true })
         .is("acknowledged_at", null),
+      supabase
+        .from("device_update_events")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", since),
     ]);
     vehiclesCount = vehiclesRes.count ?? 0;
     sessionsCount = sessionsRes.count ?? 0;
     pendingCommands = commandsRes.count ?? 0;
+    updateEvents24h = updatesRes.count ?? 0;
   }
 
   return (
@@ -112,7 +120,7 @@ export default async function BackendPage() {
       </div>
 
       <SectionCard title="Stato rapido backend">
-        <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-4">
           <div className="rounded-md border border-[var(--color-border-tertiary)] px-3 py-2">
             <div className="text-[11px] text-[var(--color-text-secondary)]">Veicoli in DB</div>
             <div className="text-sm font-medium text-[var(--color-text-primary)]">{vehiclesCount}</div>
@@ -124,6 +132,10 @@ export default async function BackendPage() {
           <div className="rounded-md border border-[var(--color-border-tertiary)] px-3 py-2">
             <div className="text-[11px] text-[var(--color-text-secondary)]">Comandi pendenti</div>
             <div className="text-sm font-medium text-[var(--color-text-primary)]">{pendingCommands}</div>
+          </div>
+          <div className="rounded-md border border-[var(--color-border-tertiary)] px-3 py-2">
+            <div className="text-[11px] text-[var(--color-text-secondary)]">Eventi update (24h)</div>
+            <div className="text-sm font-medium text-[var(--color-text-primary)]">{updateEvents24h}</div>
           </div>
         </div>
       </SectionCard>
@@ -177,6 +189,8 @@ export default async function BackendPage() {
           </table>
         </div>
       </SectionCard>
+
+      <ControlPlanePanel />
     </div>
   );
 }

@@ -19,6 +19,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { RefreshButton } from "@/components/dashboard/RefreshButton";
 import { LiveVehicleStrip } from "@/components/dashboard/LiveVehicleStrip";
 import { DashboardAutoRefresh } from "@/components/dashboard/DashboardAutoRefresh";
+import { LiveOperationsPanel } from "@/components/dashboard/LiveOperationsPanel";
 import {
   fetchLastDataAtForSession,
   formatLastDataItaliano,
@@ -30,6 +31,7 @@ type SessionRow = {
   device_id: string;
   vehicle_id: string | null;
   started_at: string;
+  ended_at: string | null;
   raw_dtc: string[] | null;
   ai_diagnosis: string | null;
   vin: string | null;
@@ -109,7 +111,7 @@ export default async function DashboardPage() {
   if (supabase) {
     const { data: sessionData } = await supabase
       .from("sessions")
-      .select("id, device_id, vehicle_id, started_at, raw_dtc, ai_diagnosis, vin, vin_decoded, vehicles(make, model)")
+      .select("id, device_id, vehicle_id, started_at, ended_at, raw_dtc, ai_diagnosis, vin, vin_decoded, vehicles(make, model)")
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -198,6 +200,7 @@ export default async function DashboardPage() {
     : "none";
   const vehicle = buildVehicleInfo(session, connectionStatus, lastDataAt);
   const hasData = session !== null;
+  const hasActiveSession = Boolean(session && !session.ended_at);
 
   return (
     <div>
@@ -237,10 +240,19 @@ export default async function DashboardPage() {
         />
       ) : (
         <>
+          <SectionCard title="Operazioni live" action={null}>
+            <LiveOperationsPanel
+              connectionStatus={connectionStatus}
+              hasActiveSession={hasActiveSession}
+              deviceId={session?.device_id ?? null}
+              deviceIds={deviceIds}
+            />
+          </SectionCard>
+
           {dashboardMetrics.length > 0 && (
             <div
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
-              style={{ gap: "10px", marginBottom: "20px" }}
+              style={{ gap: "10px", marginBottom: "20px", marginTop: "16px" }}
             >
               {dashboardMetrics.map((m) => (
                 <MetricCard key={m.label} item={m} />

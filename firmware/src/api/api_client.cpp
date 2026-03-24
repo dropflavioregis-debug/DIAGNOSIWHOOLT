@@ -170,6 +170,19 @@ bool getDeviceCommands(const char* serverUrl, const char* apiKey, const char* de
   return ok;
 }
 
+bool getActiveProtocolProfile(const char* serverUrl, const char* apiKey, const char* deviceId,
+                              char* outBuf, size_t outLen) {
+  if (!deviceId || deviceId[0] == '\0' || !outBuf || outLen == 0) return false;
+  String path = String("/api/protocol-profiles/active?device_id=") + deviceId;
+  int code;
+  bool ok = doGet(serverUrl, apiKey, path.c_str(), outBuf, outLen, &code);
+  if (!ok && HTTP_MAX_RETRIES > 0) {
+    delay(500);
+    ok = doGet(serverUrl, apiKey, path.c_str(), outBuf, outLen, &code);
+  }
+  return ok;
+}
+
 bool postCanSnifferStream(const char* serverUrl, const char* apiKey, const char* deviceId,
                           const char* sessionId, const CanSnifferFrame* frames, size_t numFrames) {
   if (!serverUrl || !deviceId || deviceId[0] == '\0' || !frames || numFrames == 0) return false;

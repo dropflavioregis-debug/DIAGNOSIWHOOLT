@@ -90,7 +90,7 @@ export function VehicleStrip({ vehicle }: VehicleStripProps) {
       )}
       {vehicle.connectionStatus === "pending" && (
         <div className="flex shrink-0 items-center gap-2">
-          <StatusBadge variant="amber">Connessione…</StatusBadge>
+          <StatusBadge variant="amber">Connessa (attesa dati)</StatusBadge>
         </div>
       )}
       {vehicle.connectionStatus === "offline" && (

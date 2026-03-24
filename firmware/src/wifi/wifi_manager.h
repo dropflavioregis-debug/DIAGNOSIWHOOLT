@@ -39,7 +39,18 @@ void wifiSetRuntimeStatus(
   const char* sessionId,
   const char* vehicleId,
   bool lastIngestOk,
-  uint32_t lastIngestAgeMs
+  uint32_t lastIngestAgeMs,
+  uint32_t rxFramesTotal,
+  uint32_t rxFramesPerSec,
+  uint32_t lastRxAgeMs,
+  uint32_t lastCanId,
+  uint8_t lastCanDlc,
+  uint32_t busOffCount,
+  uint32_t rxQueueOverflowCount,
+  uint32_t canRestartCount,
+  int activeBitrateKbps,
+  const char* lastCanError,
+  const char* lastProbeSummary
 );
 
 // Append one event line to local runtime log ring buffer.

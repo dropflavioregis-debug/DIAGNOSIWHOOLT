@@ -13,8 +13,11 @@
 #include "uds/uds_client.h"
 #include "uds/uds_services.h"
 #include "ota/ota_manager.h"
+#include "control/command_dispatcher.h"
+#include "control/protocol_engine.h"
 #include <cstdio>
 #include <cstring>
+#include <cstdlib>
 
 using namespace ev_diag;
 
@@ -39,6 +42,7 @@ static char s_ingestBodyBuf[2048];
 static char s_ingestRespBuf[256];
 static char s_libBuf[2048];
 static char s_cmdBuf[384];
+static char s_profileBuf[2048];
 static ev_diag::CanSnifferFrame s_snifferBatch[SNIFFER_BATCH_MAX];
 static char s_detectJsonBuf[512];
 static char s_detectRespBuf[1024];
@@ -49,6 +53,20 @@ static int s_lastIngestFailCode = 0;
 static int s_lastCommandsFailCode = 0;
 static int s_lastSnifferFailCode = 0;
 static bool s_canFallbackStreamLogged = false;
+static uint32_t s_canRxFramesTotal = 0;
+static uint32_t s_canRxFramesPerSec = 0;
+static uint32_t s_canLastRxMs = 0;
+static uint32_t s_canLastId = 0;
+static uint8_t s_canLastDlc = 0;
+static uint32_t s_canBusOffCount = 0;
+static uint32_t s_canRxQueueOverflowCount = 0;
+static uint32_t s_canRestartCount = 0;
+static unsigned long s_canLastStatsMs = 0;
+static uint32_t s_canStatsWindowFrames = 0;
+static unsigned long s_lastCanDiagPrintMs = 0;
+static char s_lastCanError[96] = "";
+static char s_lastProbeSummary[160] = "";
+static bool s_prevBusOff = false;
 
 static bool loadConfigFromFilesystemIfNeeded(NvsConfig& cfg) {
   if (configHasWifi(cfg)) return true;
@@ -169,6 +187,78 @@ static bool parseDidString(const char* str, uint16_t* outDid) {
   return true;
 }
 
+static bool parseIntJsonField(const char* json, const char* key, int* outValue) {
+  if (!json || !key || !outValue) return false;
+  const char* p = strstr(json, key);
+  if (!p) return false;
+  p += strlen(key);
+  while (*p == ' ' || *p == '\t') p++;
+  char* end = nullptr;
+  long v = strtol(p, &end, 10);
+  if (end == p) return false;
+  *outValue = (int)v;
+  return true;
+}
+
+static bool isSupportedCanBitrate(int kbps) {
+  return kbps == 125 || kbps == 250 || kbps == 500 || kbps == 1000;
+}
+
+static void setLastCanError(const char* msg) {
+  if (!msg) {
+    s_lastCanError[0] = '\0';
+    return;
+  }
+  strncpy(s_lastCanError, msg, sizeof(s_lastCanError) - 1);
+  s_lastCanError[sizeof(s_lastCanError) - 1] = '\0';
+}
+
+static bool applyCanBitrate(int kbps) {
+  if (!isSupportedCanBitrate(kbps)) {
+    setLastCanError("Unsupported bitrate");
+    return false;
+  }
+  if (!canReconfigureSpeed(kbps)) {
+    setLastCanError("TWAI reconfigure failed");
+    return false;
+  }
+  s_cfg.can_speed_kbps = (uint32_t)kbps;
+  (void)configSave(s_cfg);
+  s_canRestartCount++;
+  setLastCanError("");
+  return true;
+}
+
+static uint32_t runCanProbeForBitrate(int kbps, unsigned long durationMs, uint32_t* outFirstId) {
+  if (outFirstId) *outFirstId = 0;
+  if (!applyCanBitrate(kbps)) return 0;
+  unsigned long start = millis();
+  uint32_t count = 0;
+  bool firstSeen = false;
+  while (millis() - start < durationMs) {
+    uint32_t id = 0;
+    uint8_t len = 0;
+    uint8_t data[8];
+    bool extd = false;
+    if (canReceive(&id, &len, data, sizeof(data), &extd)) {
+      (void)extd;
+      if (!firstSeen) {
+        firstSeen = true;
+        if (outFirstId) *outFirstId = id;
+      }
+      count++;
+      s_canRxFramesTotal++;
+      s_canStatsWindowFrames++;
+      s_canLastRxMs = millis();
+      s_canLastId = id;
+      s_canLastDlc = len;
+    } else {
+      delay(2);
+    }
+  }
+  return count;
+}
+
 // Decode UDS 0x59 DTC response: after 0x59, 0x02 comes mask, formatId, then 4 bytes per DTC (3 bytes code + 1 status).
 // DTC string: P/C/B/U + 5 hex digits (ISO 15031-6).
 static void decodeDtcResponse(const uint8_t* data, size_t len, char dtcStrings[][8], size_t maxDtc, size_t* outCount) {
@@ -276,21 +366,155 @@ static bool buildAndPostIngest() {
   return true;
 }
 
+static void tryRunAssignedProfile() {
+  if (s_cfg.server_url[0] == '\0') return;
+  char deviceId[40];
+  getDeviceId(deviceId, sizeof(deviceId));
+  if (!getActiveProtocolProfile(
+        s_cfg.server_url, s_cfg.api_key, deviceId, s_profileBuf, sizeof(s_profileBuf))) {
+    return;
+  }
+  ProtocolRunResult run = {};
+  if (runProtocolProfileJson(s_profileBuf, &run) && run.ok) {
+    wifiLogEvent("Command received: run_profile OK");
+    (void)buildAndPostIngest();
+  } else {
+    wifiLogEvent("Command received: run_profile FAIL");
+  }
+}
+
 // Esegue i comandi ricevuti dalla webapp (risposta GET /api/device/commands).
 static void processDeviceCommands(const char* json) {
   if (!json) return;
+  ParsedDeviceCommands parsed = {};
+  if (parseDeviceCommandsJson(json, &parsed)) {
+    for (size_t i = 0; i < parsed.count; i++) {
+      const ParsedDeviceCommand& cmd = parsed.commands[i];
+      switch (cmd.type) {
+        case DeviceCommandType::StartSession:
+          sessionForceNew();
+          wifiLogEvent("Command received: start_session");
+          break;
+        case DeviceCommandType::SetSniffer:
+          if (cmd.hasSnifferActive) {
+            s_snifferActive = cmd.snifferActive;
+            wifiLogEvent(cmd.snifferActive ? "Command received: set_sniffer=true" : "Command received: set_sniffer=false");
+          }
+          break;
+        case DeviceCommandType::ReadVin:
+          if (readVin(uds::DID_VIN, s_vin, sizeof(s_vin))) (void)buildAndPostIngest();
+          break;
+        case DeviceCommandType::ReadDtc: {
+          uint8_t dtcBuf[64];
+          size_t dtcLen = 0;
+          if (readDTC(dtcBuf, sizeof(dtcBuf), &dtcLen)) (void)buildAndPostIngest();
+          break;
+        }
+        case DeviceCommandType::RunProfile:
+          tryRunAssignedProfile();
+          break;
+        case DeviceCommandType::Unknown:
+        default:
+          break;
+      }
+    }
+  }
   if (strstr(json, "\"start_session\"") != nullptr) {
     sessionForceNew();
     Serial.println("Command: start_session");
     wifiLogEvent("Command received: start_session");
   }
   // sniffer_active dalla dashboard (subscribe CAN Sniffer)
-  if (strstr(json, "\"sniffer_active\":true") != nullptr) {
+  if (strstr(json, "\"sniffer_active\":true") != nullptr || strstr(json, "\"active\":true") != nullptr) {
     s_snifferActive = true;
     wifiLogEvent("Command received: sniffer_active=true");
-  } else if (strstr(json, "\"sniffer_active\"") != nullptr) {
+  } else if (strstr(json, "\"sniffer_active\"") != nullptr || strstr(json, "\"active\"") != nullptr) {
     s_snifferActive = false;
     wifiLogEvent("Command received: sniffer_active=false");
+  }
+  if (strstr(json, "\"read_vin\"") != nullptr) {
+    if (readVin(uds::DID_VIN, s_vin, sizeof(s_vin))) {
+      Serial.print("Command VIN: ");
+      Serial.println(s_vin);
+      wifiLogEvent("Command received: read_vin OK");
+      (void)buildAndPostIngest();
+    } else {
+      wifiLogEvent("Command received: read_vin FAIL");
+    }
+  }
+  if (strstr(json, "\"read_dtc\"") != nullptr) {
+    uint8_t dtcBuf[64];
+    size_t dtcLen = 0;
+    if (readDTC(dtcBuf, sizeof(dtcBuf), &dtcLen)) {
+      char line[72];
+      snprintf(line, sizeof(line), "Command received: read_dtc OK len=%u", (unsigned)dtcLen);
+      wifiLogEvent(line);
+      (void)buildAndPostIngest();
+    } else {
+      wifiLogEvent("Command received: read_dtc FAIL");
+    }
+  }
+  if (strstr(json, "\"set_can_bitrate\"") != nullptr) {
+    int bitrate = 0;
+    if (parseIntJsonField(json, "\"bitrate_kbps\":", &bitrate) && isSupportedCanBitrate(bitrate)) {
+      if (applyCanBitrate(bitrate)) {
+        char line[96];
+        snprintf(line, sizeof(line), "Command set_can_bitrate OK: %d", bitrate);
+        wifiLogEvent(line);
+      } else {
+        char line[96];
+        snprintf(line, sizeof(line), "Command set_can_bitrate FAIL: %d", bitrate);
+        wifiLogEvent(line);
+      }
+    } else {
+      wifiLogEvent("Command set_can_bitrate invalid payload");
+    }
+  }
+  if (strstr(json, "\"can_debug_probe\"") != nullptr) {
+    int durationMs = 2000;
+    (void)parseIntJsonField(json, "\"duration_ms\":", &durationMs);
+    if (durationMs < 500) durationMs = 500;
+    if (durationMs > 10000) durationMs = 10000;
+    int bitrate = canGetSpeedKbps();
+    (void)parseIntJsonField(json, "\"bitrate_kbps\":", &bitrate);
+    if (!isSupportedCanBitrate(bitrate)) bitrate = canGetSpeedKbps();
+    uint32_t firstId = 0;
+    uint32_t frames = runCanProbeForBitrate(bitrate, (unsigned long)durationMs, &firstId);
+    snprintf(
+      s_lastProbeSummary,
+      sizeof(s_lastProbeSummary),
+      "probe bitrate=%d duration_ms=%d frames=%lu first_id=%lu",
+      bitrate,
+      durationMs,
+      (unsigned long)frames,
+      (unsigned long)firstId
+    );
+    wifiLogEvent(s_lastProbeSummary);
+  }
+  if (strstr(json, "\"can_bitrate_sweep\"") != nullptr) {
+    int durationMs = 1200;
+    (void)parseIntJsonField(json, "\"duration_ms\":", &durationMs);
+    if (durationMs < 400) durationMs = 400;
+    if (durationMs > 5000) durationMs = 5000;
+    const int sweep[] = { 125, 250, 500, 1000 };
+    char summary[160];
+    int n = snprintf(summary, sizeof(summary), "sweep %dms:", durationMs);
+    for (size_t i = 0; i < 4 && n > 0 && (size_t)n < sizeof(summary); i++) {
+      uint32_t firstId = 0;
+      uint32_t frames = runCanProbeForBitrate(sweep[i], (unsigned long)durationMs, &firstId);
+      int w = snprintf(
+        summary + n,
+        sizeof(summary) - (size_t)n,
+        " %d=%lu",
+        sweep[i],
+        (unsigned long)frames
+      );
+      if (w < 0) break;
+      n += w;
+    }
+    strncpy(s_lastProbeSummary, summary, sizeof(s_lastProbeSummary) - 1);
+    s_lastProbeSummary[sizeof(s_lastProbeSummary) - 1] = '\0';
+    wifiLogEvent(s_lastProbeSummary);
   }
   // Estensibile: altri comandi es. "reboot", "sync_config" ecc.
 }
@@ -427,7 +651,9 @@ void loop() {
 
   if (s_cfg.server_url[0] != '\0' && (millis() - s_lastOtaCheckMs >= config::OTA_CHECK_INTERVAL_MS)) {
     s_lastOtaCheckMs = millis();
-    OtaResult ota = otaCheckAndUpdate(s_cfg.server_url, s_cfg.api_key);
+    char deviceId[40];
+    getDeviceId(deviceId, sizeof(deviceId));
+    OtaResult ota = otaCheckAndUpdate(s_cfg.server_url, s_cfg.api_key, deviceId, "stable");
     if (ota.checked && ota.message) {
       Serial.println(ota.message);
     }
@@ -480,6 +706,11 @@ void loop() {
       bool extd = false;
       if (!canReceive(&id, &len, data, sizeof(data), &extd))
         break;
+      s_canRxFramesTotal++;
+      s_canStatsWindowFrames++;
+      s_canLastRxMs = millis();
+      s_canLastId = id;
+      s_canLastDlc = len;
       s_snifferBatch[n].id = id;
       s_snifferBatch[n].len = len;
       s_snifferBatch[n].extended = extd;
@@ -513,13 +744,57 @@ void loop() {
     }
   }
 
+  if (canIsStarted()) {
+    CanStatus canStatus = {};
+    if (canGetStatus(&canStatus)) {
+      if (canStatus.busOff && !s_prevBusOff) s_canBusOffCount++;
+      s_prevBusOff = canStatus.busOff;
+      s_canRxQueueOverflowCount = canStatus.rxOverrunCount + canStatus.rxMissCount;
+      if (canStatus.busOff) setLastCanError("TWAI BUS-OFF");
+      else if (canStatus.recovering) setLastCanError("TWAI recovering");
+      else if (s_lastCanError[0] != '\0' &&
+               strcmp(s_lastCanError, "TWAI BUS-OFF") == 0) setLastCanError("");
+    }
+  }
+
+  if (millis() - s_canLastStatsMs >= 1000) {
+    s_canLastStatsMs = millis();
+    s_canRxFramesPerSec = s_canStatsWindowFrames;
+    s_canStatsWindowFrames = 0;
+  }
+
+  if (millis() - s_lastCanDiagPrintMs >= 1000) {
+    s_lastCanDiagPrintMs = millis();
+    Serial.printf(
+      "CAN diag: bitrate=%d rx_total=%lu rx_s=%lu last_id=0x%lX dlc=%u last_rx_ms=%lu err=%s\n",
+      canGetSpeedKbps(),
+      (unsigned long)s_canRxFramesTotal,
+      (unsigned long)s_canRxFramesPerSec,
+      (unsigned long)s_canLastId,
+      (unsigned)s_canLastDlc,
+      (unsigned long)((s_canLastRxMs > 0) ? (millis() - s_canLastRxMs) : 0UL),
+      (s_lastCanError[0] != '\0') ? s_lastCanError : "-"
+    );
+  }
+
   wifiSetRuntimeStatus(
     canIsStarted(),
     s_snifferActive,
     sessionGetId(),
     s_vehicle_id[0] != '\0' ? s_vehicle_id : nullptr,
     s_lastIngestOk,
-    millis() - s_lastIngestMs
+    millis() - s_lastIngestMs,
+    s_canRxFramesTotal,
+    s_canRxFramesPerSec,
+    (s_canLastRxMs > 0) ? (millis() - s_canLastRxMs) : 0UL,
+    s_canLastId,
+    s_canLastDlc,
+    s_canBusOffCount,
+    s_canRxQueueOverflowCount,
+    s_canRestartCount,
+    canGetSpeedKbps(),
+    s_lastCanError,
+    s_lastProbeSummary
   );
 
   delay(50);

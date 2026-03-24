@@ -1,12 +1,12 @@
 {
-  "wifi_ssid": "",
-  "wifi_password": "",
-  "server_url": "https://tuo-progetto.vercel.app",
-  "api_key": "",
-  "device_name": "EV-Diag-01",
+  "wifi_ssid": "Ciolli-Ford2.4",
+  "wifi_password": "c10ll1w1f1",
+  "server_url": "https://diagnosiwhoolt-two.vercel.app",
+  "api_key": "yJhbGciOiJI",
+  "device_name": "EV-Diag-01", 
   "can_speed_kbps": 500,
   "auto_detect_vehicle": true,
   "cache_libs_locally": true,
-  "send_interval_ms": 1000,
+  "send_interval_ms": 5000,
   "debug_serial": true
 }
